@@ -6,8 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "seed": "npx ts-node --project tsconfig.json -e \"require('./scripts/seed.ts')\""
+    "lint": "next lint"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",

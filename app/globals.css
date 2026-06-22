@@ -1,18 +1,58 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+:root {
+  --navy: #0E2436;
+  --navy2: #16314a;
+  --blue: #1C8FD6;
+  --blue-deep: #14629B;
+  --orange: #F26F1F;
+  --green: #1FA871;
+  --red: #E0563B;
+  --purple: #7A5AF8;
+  --yellow: #D4A017;
+  --bg: #F3F6FA;
+  --surface: #fff;
+  --border: #E8EDF3;
+  --border-2: #DCE3EC;
+  --text: #15212E;
+  --text-2: #5A6B7B;
+  --text-3: #92A0AF;
 }
 
-html {
-  scroll-behavior: smooth;
-}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
 
 body {
-  background-color: #f8fafc;
-  color: #1e293b;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  min-width: 1024px;
 }
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 3px; }
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, #e8edf3 25%, #f3f6fa 50%, #e8edf3 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 6px;
+}
+
+@keyframes slide-in {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+.drawer-enter { animation: slide-in 0.2s ease-out; }

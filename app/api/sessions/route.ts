@@ -1,42 +1,29 @@
-import { getDb } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
+import { SESSIONS, LEARNERS, TUTORS } from '@/lib/data'
+
+let sessions = [...SESSIONS]
 
 export async function GET(req: NextRequest) {
-  const studentId = req.nextUrl.searchParams.get('studentId')
-  const db = getDb()
+  const tutorId = req.nextUrl.searchParams.get('tutor_id')
+  const learnerId = req.nextUrl.searchParams.get('learner_id')
 
-  let query = 'SELECT * FROM sessions ORDER BY date DESC, start_time DESC'
-  const params = []
+  let results = sessions.map(s => ({
+    ...s,
+    learner: LEARNERS.find(l => l.id === s.learner_id),
+    tutor: TUTORS.find(t => t.id === s.tutor_id),
+  }))
 
-  if (studentId) {
-    query = 'SELECT * FROM sessions WHERE student_id = ? ORDER BY date DESC, start_time DESC'
-    params.push(studentId)
-  }
+  if (tutorId) results = results.filter(s => s.tutor_id === tutorId)
+  if (learnerId) results = results.filter(s => s.learner_id === learnerId)
 
-  const sessions = db.prepare(query).all(...params)
-  db.close()
-  return NextResponse.json(sessions)
+  results.sort((a, b) => new Date(b.scheduled_at).getTime() - new Date(a.scheduled_at).getTime())
+  return NextResponse.json({ data: results, error: null })
 }
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const db = getDb()
-
-  const stmt = db.prepare(`
-    INSERT INTO sessions (student_id, date, start_time, end_time, subject, status, notes)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `)
-
-  const result = stmt.run(
-    body.student_id,
-    body.date,
-    body.start_time,
-    body.end_time,
-    body.subject || null,
-    body.status || 'scheduled',
-    body.notes || null
-  )
-
-  db.close()
-  return NextResponse.json({ id: result.lastInsertRowid }, { status: 201 })
+  const id = 's' + Date.now()
+  const newSession = { id, created_at: new Date().toISOString(), attendance: 'present' as const, duration_mins: 60, ...body }
+  sessions = [newSession, ...sessions]
+  return NextResponse.json({ data: newSession, error: null }, { status: 201 })
 }

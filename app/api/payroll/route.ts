@@ -1,29 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PAYROLL, TUTORS } from '@/lib/data'
-
-let payroll = [...PAYROLL]
+import { gasGet, gasPost } from '@/lib/gas'
 
 export async function GET() {
-  const data = payroll.map(p => ({
-    ...p,
-    tutor: TUTORS.find(t => t.id === p.tutor_id),
-  }))
-  return NextResponse.json({ data, error: null })
+  const result = await gasGet('payroll')
+  return NextResponse.json(result)
 }
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
   const { id, all } = body
 
+  const payrollRes = await gasGet('payroll')
+  const payroll = payrollRes.data ?? []
+
   if (all) {
-    payroll = payroll.map(p =>
-      p.status === 'due' ? { ...p, status: 'paid' as const, paid_at: new Date().toISOString() } : p
-    )
+    const dues = payroll.filter((p: any) => p.status === 'due')
+    await Promise.all(dues.map((p: any) =>
+      gasPost('payroll', 'update', { id: p.id, data: { status: 'paid', paid_at: new Date().toISOString() } })
+    ))
   } else if (id) {
-    const idx = payroll.findIndex(p => p.id === id)
-    if (idx !== -1) payroll[idx] = { ...payroll[idx], status: 'paid', paid_at: new Date().toISOString() }
+    await gasPost('payroll', 'update', { id, data: { status: 'paid', paid_at: new Date().toISOString() } })
   }
 
-  const data = payroll.map(p => ({ ...p, tutor: TUTORS.find(t => t.id === p.tutor_id) }))
-  return NextResponse.json({ data, error: null })
+  const updated = await gasGet('payroll')
+  return NextResponse.json(updated)
 }

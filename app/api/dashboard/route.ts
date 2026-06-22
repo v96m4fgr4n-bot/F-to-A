@@ -1,39 +1,46 @@
 import { NextResponse } from 'next/server'
-import { LEARNERS, SESSIONS, INVOICES, LEDGER } from '@/lib/data'
+import { gasGet } from '@/lib/gas'
 
 export async function GET() {
+  const [learnersRes, sessionsRes, invoicesRes, ledgerRes] = await Promise.all([
+    gasGet('learners'),
+    gasGet('sessions'),
+    gasGet('invoices'),
+    gasGet('ledger'),
+  ])
+
+  const learners = learnersRes.data ?? []
+  const sessions = sessionsRes.data ?? []
+  const invoices = invoicesRes.data ?? []
+  const ledger = ledgerRes.data ?? []
+
   const now = new Date()
   const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 
-  const mrr = LEARNERS.filter(l => l.status === 'active').reduce((sum, l) => sum + l.mrr, 0)
-  const active_learners = LEARNERS.filter(l => l.status === 'active').length
-  const sessions_this_month = SESSIONS.filter(s => s.scheduled_at.startsWith(thisMonth)).length
-  const outstanding_invoices = INVOICES.filter(i => i.status === 'due' || i.status === 'overdue').length
+  const mrr = learners.filter((l: any) => l.status === 'active').reduce((s: number, l: any) => s + Number(l.mrr || 0), 0)
+  const active_learners = learners.filter((l: any) => l.status === 'active').length
+  const sessions_this_month = sessions.filter((s: any) => (s.scheduled_at || '').startsWith(thisMonth)).length
+  const outstanding_invoices = invoices.filter((i: any) => i.status === 'due' || i.status === 'overdue').length
 
-  // Last 6 months revenue
-  const months: { month: string; revenue: number; sessions: number }[] = []
+  const months = []
   for (let i = 5; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
     const label = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
-    const revenue = LEDGER.filter(e => e.type === 'income' && e.entry_date.startsWith(key)).reduce((s, e) => s + e.amount, 0)
-    const sess = SESSIONS.filter(s => s.scheduled_at.startsWith(key)).length
+    const revenue = ledger.filter((e: any) => e.type === 'income' && (e.entry_date || '').startsWith(key)).reduce((s: number, e: any) => s + Number(e.amount || 0), 0)
+    const sess = sessions.filter((s: any) => (s.scheduled_at || '').startsWith(key)).length
     months.push({ month: label, revenue, sessions: sess })
   }
 
-  // Plan breakdown
   const planCounts: Record<string, number> = {}
-  LEARNERS.filter(l => l.plan).forEach(l => {
-    planCounts[l.plan!] = (planCounts[l.plan!] || 0) + 1
-  })
+  learners.filter((l: any) => l.plan).forEach((l: any) => { planCounts[l.plan] = (planCounts[l.plan] || 0) + 1 })
 
-  // Outstanding invoices detail
-  const outstanding = INVOICES.filter(i => i.status === 'due' || i.status === 'overdue')
+  const learnerMap: Record<string, any> = {}
+  learners.forEach((l: any) => learnerMap[l.id] = l)
+  const outstanding = invoices
+    .filter((i: any) => i.status === 'due' || i.status === 'overdue')
     .slice(0, 5)
-    .map(inv => ({
-      ...inv,
-      learner: LEARNERS.find(l => l.id === inv.learner_id)
-    }))
+    .map((i: any) => ({ ...i, learner: learnerMap[i.learner_id] || null }))
 
   return NextResponse.json({
     data: { mrr, active_learners, sessions_this_month, outstanding_invoices, months, planCounts, outstanding },

@@ -1,20 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PIPELINE, LEARNERS } from '@/lib/data'
-
-let pipeline = [...PIPELINE]
+import { gasGet, gasPost } from '@/lib/gas'
 
 export async function GET() {
-  const results = pipeline.map(p => ({
-    ...p,
-    learner: p.learner_id ? LEARNERS.find(l => l.id === p.learner_id) : null,
-  }))
-  return NextResponse.json({ data: results, error: null })
+  const result = await gasGet('pipeline')
+  return NextResponse.json(result)
 }
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const id = 'pipe' + Date.now()
-  const entry = { id, stage: 'inquiry' as const, moved_at: new Date().toISOString(), created_at: new Date().toISOString(), learner_id: null, churn_reason: null, subjects: [], ...body }
-  pipeline = [entry, ...pipeline]
-  return NextResponse.json({ data: entry, error: null }, { status: 201 })
+  const result = await gasPost('pipeline', 'create', { data: { stage: 'inquiry', moved_at: new Date().toISOString(), ...body } })
+  return NextResponse.json(result, { status: 201 })
 }

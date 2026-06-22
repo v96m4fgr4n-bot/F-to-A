@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { SESSIONS } from '@/lib/data'
-
-let sessions = [...SESSIONS]
+import { gasPost } from '@/lib/gas'
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const body = await req.json()
-  const idx = sessions.findIndex(s => s.id === params.id)
-  if (idx === -1) return NextResponse.json({ data: null, error: 'Not found' }, { status: 404 })
-  sessions[idx] = { ...sessions[idx], ...body }
-  return NextResponse.json({ data: sessions[idx], error: null })
+  const result = await gasPost('sessions', 'update', { id: params.id, data: body })
+  return NextResponse.json(result)
 }

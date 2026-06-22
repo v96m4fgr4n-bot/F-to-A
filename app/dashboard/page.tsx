@@ -1,113 +1,106 @@
 'use client'
-
 import { useEffect, useState } from 'react'
+import { KpiCard } from '@/components/ui/KpiCard'
+import { Badge } from '@/components/ui/Badge'
+import { TableSkeleton } from '@/components/ui/Skeleton'
+import { formatCurrency, formatDate } from '@/lib/utils'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
 
-interface DashboardStats {
-  totalStudents: number
-  totalSessions: number
-  totalRevenue: number
-  upcomingSessions: any[]
-  recentPayments: any[]
+const PLAN_COLORS: Record<string, string> = {
+  intensive: '#7A5AF8', standard: '#1C8FD6', starter: '#1FA871', payg: '#F26F1F', inquiry: '#D4A017'
 }
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const fetchStats = async () => {
-      const [studentsRes, sessionsRes, paymentsRes] = await Promise.all([
-        fetch('/api/students'),
-        fetch('/api/sessions'),
-        fetch('/api/payments'),
-      ])
-
-      const students = await studentsRes.json()
-      const sessions = await sessionsRes.json()
-      const payments = await paymentsRes.json()
-
-      const today = new Date().toISOString().split('T')[0]
-      const upcomingSessions = sessions
-        .filter((s: any) => s.date >= today && s.status !== 'cancelled')
-        .sort((a: any, b: any) => a.date.localeCompare(b.date))
-        .slice(0, 5)
-
-      const totalRevenue = payments.reduce((sum: number, p: any) => sum + p.amount, 0)
-
-      const recentPayments = payments
-        .sort((a: any, b: any) => b.date.localeCompare(a.date))
-        .slice(0, 5)
-
-      setStats({
-        totalStudents: students.length,
-        totalSessions: sessions.length,
-        totalRevenue,
-        upcomingSessions,
-        recentPayments,
-      })
-      setLoading(false)
-    }
-
-    fetchStats()
+    fetch('/api/dashboard').then(r => r.json()).then(r => { setData(r.data); setLoading(false) })
   }, [])
 
-  if (loading) return <p>Loading dashboard...</p>
-  if (!stats) return <p>No data available</p>
-
   return (
-    <div className="py-8">
-      <h1 className="text-3xl font-bold mb-8">Dashboard</h1>
+    <div>
+      <div className="mb-7">
+        <h1 className="text-2xl font-800 text-tx">Dashboard</h1>
+        <p className="text-tx-2 text-sm mt-1">F-to-A Tutoring — June 2026 overview</p>
+      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-gray-600 text-sm mb-2">Total Students</h3>
-          <p className="text-4xl font-bold text-blue-600">{stats.totalStudents}</p>
+      <div className="grid grid-cols-4 gap-4 mb-7">
+        {loading ? (
+          Array(4).fill(0).map((_, i) => <div key={i} className="skeleton h-28 rounded-card" />)
+        ) : (
+          <>
+            <KpiCard label="Monthly Revenue (MRR)" value={formatCurrency(data?.mrr ?? 0)} accent="bg-green" deltaUp delta="12% vs last month" />
+            <KpiCard label="Active Learners" value={data?.active_learners ?? 0} accent="bg-brand" />
+            <KpiCard label="Sessions This Month" value={data?.sessions_this_month ?? 0} accent="bg-purple" />
+            <KpiCard label="Outstanding Invoices" value={data?.outstanding_invoices ?? 0} accent="bg-red" />
+          </>
+        )}
+      </div>
+
+      <div className="grid grid-cols-3 gap-5 mb-5">
+        <div className="col-span-2 bg-surface rounded-card border border-border p-5">
+          <h2 className="text-sm font-700 text-tx mb-4">Revenue & Sessions — Last 6 Months</h2>
+          {loading ? <div className="skeleton h-48" /> : (
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={data?.months ?? []}>
+                <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#92A0AF' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: '#92A0AF' }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ borderRadius: 9, border: '1px solid #E8EDF3', fontSize: 12 }} />
+                <Line type="monotone" dataKey="revenue" stroke="#1C8FD6" strokeWidth={2} dot={false} name="Revenue ($)" />
+                <Line type="monotone" dataKey="sessions" stroke="#1FA871" strokeWidth={2} dot={false} name="Sessions" />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
         </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-gray-600 text-sm mb-2">Total Sessions</h3>
-          <p className="text-4xl font-bold text-green-600">{stats.totalSessions}</p>
-        </div>
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-gray-600 text-sm mb-2">Total Revenue</h3>
-          <p className="text-4xl font-bold text-purple-600">${stats.totalRevenue.toFixed(2)}</p>
+
+        <div className="bg-surface rounded-card border border-border p-5">
+          <h2 className="text-sm font-700 text-tx mb-4">Learners by Plan</h2>
+          {loading ? <div className="skeleton h-48" /> : (
+            <ResponsiveContainer width="100%" height={200}>
+              <PieChart>
+                <Pie data={Object.entries(data?.planCounts ?? {}).map(([name, value]) => ({ name, value }))}
+                  dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={80}>
+                  {Object.keys(data?.planCounts ?? {}).map((plan, i) => (
+                    <Cell key={i} fill={PLAN_COLORS[plan] ?? '#92A0AF'} />
+                  ))}
+                </Pie>
+                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Upcoming Sessions</h2>
-          {stats.upcomingSessions.length === 0 ? (
-            <p className="text-gray-600">No upcoming sessions</p>
+      <div className="bg-surface rounded-card border border-border p-5">
+        <h2 className="text-sm font-700 text-tx mb-4">Outstanding Invoices</h2>
+        {loading ? <TableSkeleton rows={3} cols={4} /> : (
+          data?.outstanding?.length === 0 ? (
+            <p className="text-tx-3 text-sm text-center py-6">No outstanding invoices 🎉</p>
           ) : (
-            <div className="space-y-4">
-              {stats.upcomingSessions.map((session: any) => (
-                <div key={session.id} className="border rounded p-4">
-                  <p className="font-semibold">{session.date} at {session.start_time}</p>
-                  <p className="text-gray-600 text-sm">{session.subject}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-xl font-semibold mb-4">Recent Payments</h2>
-          {stats.recentPayments.length === 0 ? (
-            <p className="text-gray-600">No payments recorded</p>
-          ) : (
-            <div className="space-y-4">
-              {stats.recentPayments.map((payment: any) => (
-                <div key={payment.id} className="border rounded p-4 flex justify-between items-center">
-                  <div>
-                    <p className="font-semibold">${payment.amount.toFixed(2)}</p>
-                    <p className="text-gray-600 text-sm">{payment.date}</p>
-                  </div>
-                  <span className="text-green-600 font-semibold">{payment.status}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border">
+                  {['Reference', 'Learner', 'Amount', 'Due', 'Status'].map(h => (
+                    <th key={h} className="text-left text-xs text-tx-3 font-600 pb-2">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {data?.outstanding?.map((inv: any) => (
+                  <tr key={inv.id} className="border-b border-border/50 hover:bg-bg transition">
+                    <td className="py-2.5 font-mono text-xs text-tx-2">{inv.reference}</td>
+                    <td className="py-2.5 text-tx font-500">{inv.learner?.name ?? '—'}</td>
+                    <td className="py-2.5 font-mono font-600 text-tx">{formatCurrency(inv.amount)}</td>
+                    <td className="py-2.5 text-tx-2">{formatDate(inv.due_date)}</td>
+                    <td className="py-2.5"><Badge value={inv.status} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )
+        )}
       </div>
     </div>
   )

@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>F→A Tutoring Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0E2436;--navy2:#16314a;--brand:#1C8FD6;--brand-deep:#14629B;
+  --green:#1FA871;--orange:#F26F1F;--purple:#7A5AF8;--red:#E0563B;--yellow:#D4A017;
+  --bg:#F3F6FA;--surface:#fff;--border:#E8EDF3;--border2:#DCE3EC;
+  --tx:#15212E;--tx2:#5A6B7B;--tx3:#92A0AF;
+  --radius-card:14px;--radius-btn:9px;
+}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--tx);font-size:14px;line-height:1.5;min-height:100vh;display:flex}
+/* ── Sidebar ── */
+#sidebar{width:230px;min-height:100vh;background:var(--navy);display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:50}
+.sidebar-logo{padding:24px 20px 20px;border-bottom:1px solid rgba(255,255,255,.08)}
+.sidebar-logo .wordmark{font-size:20px;font-weight:700;color:#fff;letter-spacing:-.5px}
+.sidebar-logo .wordmark span{color:var(--brand)}
+.sidebar-logo .subtitle{font-size:11px;color:rgba(255,255,255,.4);margin-top:2px}
+.nav-section{padding:12px 12px 4px;font-size:10px;font-weight:600;color:rgba(255,255,255,.3);letter-spacing:.08em;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;margin:1px 8px;border-radius:8px;color:rgba(255,255,255,.6);font-size:13.5px;font-weight:500;cursor:pointer;transition:all .15s}
+.nav-item:hover{background:rgba(255,255,255,.07);color:#fff}
+.nav-item.active{background:var(--brand);color:#fff}
+.nav-item svg{width:16px;height:16px;flex-shrink:0;opacity:.8}
+.nav-item.active svg{opacity:1}
+.sidebar-footer{margin-top:auto;padding:16px;border-top:1px solid rgba(255,255,255,.08);font-size:12px;color:rgba(255,255,255,.4);text-align:center}
+/* ── Main ── */
+#main{margin-left:230px;flex:1;min-height:100vh;display:flex;flex-direction:column}
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:40}
+.topbar-title{font-size:16px;font-weight:700;color:var(--tx)}
+.topbar-sub{font-size:12px;color:var(--tx3);margin-top:1px}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.page{padding:28px;display:none}
+.page.active{display:block}
+/* ── Cards ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-card);padding:20px}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-card);padding:20px}
+.kpi-label{font-size:12px;color:var(--tx3);font-weight:500;margin-bottom:8px}
+.kpi-value{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--tx)}
+.kpi-sub{font-size:12px;color:var(--tx3);margin-top:4px}
+.kpi-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
+/* ── Charts grid ── */
+.chart-grid{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:24px}
+.chart-wrap{position:relative;height:220px}
+/* ── Table ── */
+.table-wrap{overflow-x:auto;border-radius:var(--radius-card);border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;background:var(--surface)}
+thead tr{border-bottom:1px solid var(--border)}
+th{padding:10px 14px;text-align:left;font-size:11.5px;font-weight:600;color:var(--tx3);white-space:nowrap}
+td{padding:11px 14px;font-size:13.5px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tbody tr:hover{background:#f8fafc}
+/* ── Badges ── */
+.badge{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:20px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.badge-green{background:#e8f7f1;color:#1a7a55}
+.badge-red{background:#fdecea;color:#b83e2b}
+.badge-orange{background:#fff1e6;color:#c25a18}
+.badge-blue{background:#e5f2fc;color:#1362a0}
+.badge-purple{background:#f0edff;color:#5a3ecf}
+.badge-gray{background:#f1f3f5;color:var(--tx2)}
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius-btn);font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s}
+.btn-primary{background:var(--brand);color:#fff}
+.btn-primary:hover{background:var(--brand-deep)}
+.btn-outline{background:transparent;color:var(--tx2);border:1px solid var(--border2)}
+.btn-outline:hover{border-color:var(--brand);color:var(--brand)}
+.btn-danger{background:var(--red);color:#fff}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-icon{padding:6px;border-radius:7px;background:transparent;border:1px solid var(--border2);cursor:pointer;color:var(--tx2);display:inline-flex;align-items:center;justify-content:center}
+.btn-icon:hover{border-color:var(--brand);color:var(--brand)}
+/* ── Modal ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;display:none;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:16px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-header{padding:20px 24px 0;display:flex;align-items:center;justify-content:space-between}
+.modal-header h3{font-size:16px;font-weight:700}
+.modal-body{padding:20px 24px}
+.modal-footer{padding:0 24px 20px;display:flex;gap:8px;justify-content:flex-end}
+/* ── Forms ── */
+.form-group{margin-bottom:14px}
+.form-label{display:block;font-size:12px;font-weight:600;color:var(--tx2);margin-bottom:5px}
+.form-input,.form-select,.form-textarea{width:100%;padding:8px 11px;border:1px solid var(--border2);border-radius:8px;font-size:13.5px;font-family:inherit;color:var(--tx);outline:none;transition:border .15s}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--brand)}
+.form-textarea{resize:vertical;min-height:80px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+/* ── Toast ── */
+#toast{position:fixed;bottom:24px;right:24px;z-index:500;display:flex;flex-direction:column;gap:8px}
+.toast-item{background:var(--navy);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:0 4px 16px rgba(0,0,0,.2);animation:slideIn .2s ease}
+.toast-item.success{background:var(--green)}
+.toast-item.error{background:var(--red)}
+@keyframes slideIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+/* ── Loader ── */
+.loader{text-align:center;padding:40px;color:var(--tx3);font-size:13px}
+.spinner{width:24px;height:24px;border:2px solid var(--border2);border-top-color:var(--brand);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 10px}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* ── Kanban ── */
+.kanban{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kanban-col{background:var(--bg);border-radius:12px;padding:12px}
+.kanban-col-header{font-size:12px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.kanban-count{background:var(--border2);color:var(--tx2);border-radius:20px;padding:1px 7px;font-size:11px}
+.kanban-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;cursor:pointer}
+.kanban-card:hover{border-color:var(--brand)}
+.kanban-card-name{font-weight:600;font-size:13px;color:var(--tx);margin-bottom:4px}
+.kanban-card-sub{font-size:12px;color:var(--tx3)}
+/* ── Section header ── */
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.section-title{font-size:16px;font-weight:700}
+.search-input{padding:7px 12px 7px 34px;border:1px solid var(--border2);border-radius:8px;font-size:13px;outline:none;width:220px;font-family:inherit;transition:border .15s}
+.search-input:focus{border-color:var(--brand)}
+.search-wrap{position:relative;display:inline-block}
+.search-wrap svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--tx3)}
+/* ── Avatar ── */
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--brand);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+/* ── Progress bar ── */
+.progress-bar{height:5px;background:var(--border);border-radius:99px;overflow:hidden}
+.progress-fill{height:100%;background:var(--brand);border-radius:99px;transition:width .3s}
+/* ── Tab bar ── */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px}
+.tab{padding:10px 18px;font-size:13.5px;font-weight:600;color:var(--tx3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab.active{color:var(--brand);border-bottom-color:var(--brand)}
+/* ── Responsive ── */
+@media(max-width:900px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.chart-grid{grid-template-columns:1fr}.kanban{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav id="sidebar">
+  <div class="sidebar-logo">
+    <div class="wordmark">F<span>→</span>A</div>
+    <div class="subtitle">Tutoring Admin Portal</div>
+  </div>
+  <div class="nav-section">Main</div>
+  <div class="nav-item active" onclick="nav('dashboard')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+    Dashboard
+  </div>
+  <div class="nav-item" onclick="nav('learners')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    Learners
+  </div>
+  <div class="nav-item" onclick="nav('tutors')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    Tutors
+  </div>
+  <div class="nav-item" onclick="nav('sessions')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    Sessions
+  </div>
+  <div class="nav-item" onclick="nav('pipeline')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    Pipeline
+  </div>
+  <div class="nav-section">Finance</div>
+  <div class="nav-item" onclick="nav('invoices')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+    Invoices
+  </div>
+  <div class="nav-item" onclick="nav('ledger')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    Ledger
+  </div>
+  <div class="nav-item" onclick="nav('payroll')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+    Payroll
+  </div>
+  <div class="sidebar-footer">F→A Tutoring · Zimbabwe</div>
+</nav>
+
+<!-- Main -->
+<div id="main">
+  <div class="topbar">
+    <div>
+      <div class="topbar-title" id="page-title">Dashboard</div>
+      <div class="topbar-sub" id="page-sub">Overview of your tutoring business</div>
+    </div>
+    <div class="topbar-right">
+      <button class="btn btn-primary btn-sm" id="topbar-action" style="display:none" onclick="topbarAction()">+ Add</button>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="page active" id="page-dashboard">
+    <div class="kpi-grid" id="kpi-grid"><div class="loader"><div class="spinner"></div>Loading…</div></div>
+    <div class="chart-grid">
+      <div class="card"><div class="section-title" style="margin-bottom:14px;font-size:14px">Revenue & Sessions (6 months)</div><div class="chart-wrap"><canvas id="revenueChart"></canvas></div></div>
+      <div class="card"><div class="section-title" style="margin-bottom:14px;font-size:14px">Plan Mix</div><div class="chart-wrap"><canvas id="planChart"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="section-title" style="margin-bottom:14px;font-size:14px">Outstanding Invoices</div>
+      <div id="outstanding-list"><div class="loader"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+
+  <!-- LEARNERS -->
+  <div class="page" id="page-learners">
+    <div class="section-header">
+      <div class="search-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="search-input" id="learner-search" placeholder="Search learners…" oninput="filterLearners()">
+      </div>
+      <div style="display:flex;gap:8px">
+        <select class="form-select" style="width:auto;padding:7px 11px" id="learner-status-filter" onchange="filterLearners()">
+          <option value="">All statuses</option>
+          <option value="active">Active</option>
+          <option value="paused">Paused</option>
+          <option value="pending">Pending</option>
+          <option value="churned">Churned</option>
+        </select>
+        <button class="btn btn-primary" onclick="openLearnerModal()">+ Add Learner</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Name</th><th>Grade</th><th>Subject</th><th>Tutor</th><th>Plan</th><th>MRR</th><th>Progress</th><th>Status</th><th></th></tr></thead>
+        <tbody id="learners-body"><tr><td colspan="9" class="loader">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TUTORS -->
+  <div class="page" id="page-tutors">
+    <div class="section-header">
+      <div class="search-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="search-input" id="tutor-search" placeholder="Search tutors…" oninput="renderTutors()">
+      </div>
+      <button class="btn btn-primary" onclick="openTutorModal()">+ Add Tutor</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Name</th><th>Role</th><th>Subjects</th><th>Rate/Session</th><th>Email</th><th>Phone</th><th>Status</th><th></th></tr></thead>
+        <tbody id="tutors-body"><tr><td colspan="8" class="loader">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- SESSIONS -->
+  <div class="page" id="page-sessions">
+    <div class="section-header">
+      <div class="search-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="search-input" id="session-search" placeholder="Search sessions…" oninput="renderSessions()">
+      </div>
+      <button class="btn btn-primary" onclick="openSessionModal()">+ Log Session</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Date & Time</th><th>Learner</th><th>Tutor</th><th>Subject</th><th>Duration</th><th>Attendance</th><th>Notes</th><th></th></tr></thead>
+        <tbody id="sessions-body"><tr><td colspan="8" class="loader">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PIPELINE -->
+  <div class="page" id="page-pipeline">
+    <div class="section-header">
+      <span class="section-title"></span>
+      <button class="btn btn-primary" onclick="openPipelineModal()">+ Add Lead</button>
+    </div>
+    <div class="kanban" id="pipeline-board"></div>
+  </div>
+
+  <!-- INVOICES -->
+  <div class="page" id="page-invoices">
+    <div class="section-header">
+      <div class="search-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="search-input" id="invoice-search" placeholder="Search invoices…" oninput="renderInvoices()">
+      </div>
+      <div style="display:flex;gap:8px">
+        <select class="form-select" style="width:auto;padding:7px 11px" id="invoice-status-filter" onchange="renderInvoices()">
+          <option value="">All</option>
+          <option value="due">Due</option>
+          <option value="overdue">Overdue</option>
+          <option value="paid">Paid</option>
+        </select>
+        <button class="btn btn-primary" onclick="openInvoiceModal()">+ New Invoice</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Reference</th><th>Learner</th><th>Description</th><th>Amount</th><th>Due Date</th><th>Status</th><th></th></tr></thead>
+        <tbody id="invoices-body"><tr><td colspan="7" class="loader">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- LEDGER -->
+  <div class="page" id="page-ledger">
+    <div class="section-header">
+      <div style="display:flex;gap:8px;align-items:center">
+        <select class="form-select" style="width:auto;padding:7px 11px" id="ledger-type-filter" onchange="renderLedger()">
+          <option value="">All types</option>
+          <option value="income">Income</option>
+          <option value="expense">Expense</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="openLedgerModal()">+ Add Entry</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Category</th><th>Amount</th><th>Reference</th><th></th></tr></thead>
+        <tbody id="ledger-body"><tr><td colspan="7" class="loader">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PAYROLL -->
+  <div class="page" id="page-payroll">
+    <div class="section-header">
+      <span class="section-title"></span>
+      <button class="btn btn-primary" onclick="payAll()">Pay All Due</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Tutor</th><th>Period</th><th>Sessions</th><th>Rate</th><th>Bonus</th><th>Gross</th><th>Status</th><th></th></tr></thead>
+        <tbody id="payroll-body"><tr><td colspan="8" class="loader">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modals -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal" id="modal-box">
+    <div class="modal-header">
+      <h3 id="modal-title">Add</h3>
+      <button class="btn-icon" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer" id="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="modal-save" onclick="saveModal()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────
+const S = {
+  page: 'dashboard',
+  learners: [], tutors: [], sessions: [], invoices: [],
+  ledger: [], payroll: [], pipeline: [],
+  editId: null, modalType: null,
+  revenueChart: null, planChart: null,
+}
+
+const PAGE_META = {
+  dashboard: { title: 'Dashboard', sub: 'Overview of your tutoring business' },
+  learners:  { title: 'Learners',  sub: 'Manage enrolled students' },
+  tutors:    { title: 'Tutors',    sub: 'Manage your tutor team' },
+  sessions:  { title: 'Sessions',  sub: 'Track all tutoring sessions' },
+  pipeline:  { title: 'Pipeline',  sub: 'Lead & enrolment funnel' },
+  invoices:  { title: 'Invoices',  sub: 'Billing & payments' },
+  ledger:    { title: 'Ledger',    sub: 'Income & expense entries' },
+  payroll:   { title: 'Payroll',   sub: 'Tutor payment management' },
+}
+
+// ── Navigation ────────────────────────────────────────────────
+function nav(page) {
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'))
+  document.querySelectorAll(`[onclick="nav('${page}')"]`).forEach(el => el.classList.add('active'))
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'))
+  document.getElementById('page-' + page).classList.add('active')
+  const meta = PAGE_META[page] || {}
+  document.getElementById('page-title').textContent = meta.title || page
+  document.getElementById('page-sub').textContent = meta.sub || ''
+  S.page = page
+  loadPage(page)
+}
+
+function loadPage(page) {
+  if (page === 'dashboard') loadDashboard()
+  else if (page === 'learners') loadLearners()
+  else if (page === 'tutors') loadTutors()
+  else if (page === 'sessions') loadSessions()
+  else if (page === 'pipeline') loadPipeline()
+  else if (page === 'invoices') loadInvoices()
+  else if (page === 'ledger') loadLedger()
+  else if (page === 'payroll') loadPayroll()
+}
+
+// ── GAS call helper ───────────────────────────────────────────
+function gasRun(fn, ...args) {
+  return new Promise((resolve, reject) => {
+    let runner = google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)
+    runner[fn](...args)
+  })
+}
+
+// ── Toast ─────────────────────────────────────────────────────
+function toast(msg, type = '') {
+  const el = document.createElement('div')
+  el.className = 'toast-item ' + type
+  el.textContent = msg
+  document.getElementById('toast').appendChild(el)
+  setTimeout(() => el.remove(), 3000)
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+function fmt(n) { return '$' + Number(n || 0).toLocaleString() }
+function fmtDate(s) { if (!s) return '—'; const d = new Date(s); return isNaN(d) ? s : d.toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'}) }
+function fmtDateTime(s) { if (!s) return '—'; const d = new Date(s); return isNaN(d) ? s : d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) + ' ' + d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) }
+function initials(name) { return (name||'').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase() }
+function statusBadge(s) {
+  const map = { active:'green', paid:'green', present:'green', enrolled:'green', due:'orange', overdue:'red', paused:'gray', pending:'blue', churned:'gray', absent:'red', late:'orange', cancelled:'gray', inquiry:'blue', matching:'purple', trial:'orange' }
+  return `<span class="badge badge-${map[s]||'gray'}">${s}</span>`
+}
+
+// ════════════════════════════════════════════════════════════════
+// DASHBOARD
+// ════════════════════════════════════════════════════════════════
+async function loadDashboard() {
+  try {
+    const res = await gasRun('serverDashboard')
+    if (res.error) { toast(res.error, 'error'); return }
+    const d = res.data
+    renderKPIs(d)
+    renderCharts(d)
+    renderOutstanding(d.outstanding)
+  } catch(e) { toast('Failed to load dashboard', 'error') }
+}
+
+function renderKPIs(d) {
+  document.getElementById('kpi-grid').innerHTML = `
+    <div class="kpi-card"><div class="kpi-label">Monthly Revenue</div><div class="kpi-value">${fmt(d.mrr)}</div><div class="kpi-sub">MRR from active learners</div></div>
+    <div class="kpi-card"><div class="kpi-label">Active Learners</div><div class="kpi-value">${d.active_learners}</div><div class="kpi-sub">Currently enrolled</div></div>
+    <div class="kpi-card"><div class="kpi-label">Sessions This Month</div><div class="kpi-value">${d.sessions_this_month}</div><div class="kpi-sub">Scheduled sessions</div></div>
+    <div class="kpi-card"><div class="kpi-label">Outstanding Invoices</div><div class="kpi-value">${d.outstanding_invoices}</div><div class="kpi-sub">Due or overdue</div></div>
+  `
+}
+
+function renderCharts(d) {
+  if (S.revenueChart) S.revenueChart.destroy()
+  if (S.planChart) S.planChart.destroy()
+
+  const rc = document.getElementById('revenueChart').getContext('2d')
+  S.revenueChart = new Chart(rc, {
+    type: 'bar',
+    data: {
+      labels: d.months.map(m => m.month),
+      datasets: [
+        { label: 'Revenue ($)', data: d.months.map(m => m.revenue), backgroundColor: '#1C8FD640', borderColor: '#1C8FD6', borderWidth: 2, borderRadius: 4, yAxisID: 'y' },
+        { label: 'Sessions', data: d.months.map(m => m.sessions), type: 'line', borderColor: '#1FA871', backgroundColor: '#1FA87120', tension: .4, pointRadius: 4, yAxisID: 'y1' },
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { family: 'Plus Jakarta Sans', size: 11 } } } }, scales: { y: { ticks: { callback: v => '$'+v } }, y1: { position: 'right', grid: { drawOnChartArea: false } } } }
+  })
+
+  const plans = Object.entries(d.planCounts)
+  const pc = document.getElementById('planChart').getContext('2d')
+  S.planChart = new Chart(pc, {
+    type: 'doughnut',
+    data: {
+      labels: plans.map(p => p[0]),
+      datasets: [{ data: plans.map(p => p[1]), backgroundColor: ['#1C8FD6','#1FA871','#F26F1F','#7A5AF8','#E0563B'], borderWidth: 0 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { family: 'Plus Jakarta Sans', size: 11 } } } }, cutout: '68%' }
+  })
+}
+
+function renderOutstanding(list) {
+  if (!list || !list.length) { document.getElementById('outstanding-list').innerHTML = '<p style="color:var(--tx3);font-size:13px">No outstanding invoices</p>'; return }
+  document.getElementById('outstanding-list').innerHTML = `
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr><th style="padding:6px 0;font-size:11px;color:var(--tx3);font-weight:600;text-align:left">Learner</th><th style="padding:6px 0;font-size:11px;color:var(--tx3);font-weight:600;text-align:left">Ref</th><th style="padding:6px 0;font-size:11px;color:var(--tx3);font-weight:600;text-align:right">Amount</th><th style="padding:6px 0;font-size:11px;color:var(--tx3);font-weight:600;text-align:left">Status</th></tr></thead>
+      <tbody>${list.map(i=>`<tr><td style="padding:8px 0;font-weight:600">${i.learner?.name||'—'}</td><td style="padding:8px 0;color:var(--tx3);font-family:monospace">${i.reference||'—'}</td><td style="padding:8px 0;text-align:right;font-family:'JetBrains Mono',monospace;font-weight:600">${fmt(i.amount)}</td><td style="padding:8px 8px">${statusBadge(i.status)}</td></tr>`).join('')}</tbody>
+    </table>`
+}
+
+// ════════════════════════════════════════════════════════════════
+// LEARNERS
+// ════════════════════════════════════════════════════════════════
+async function loadLearners() {
+  if (S.tutors.length === 0) await loadTutorsData()
+  const res = await gasRun('serverGet', 'learners', {})
+  S.learners = res.data || []
+  renderLearners()
+}
+
+function filterLearners() { renderLearners() }
+
+function renderLearners() {
+  const q = (document.getElementById('learner-search')?.value || '').toLowerCase()
+  const sf = document.getElementById('learner-status-filter')?.value || ''
+  let data = S.learners
+  if (q) data = data.filter(l => l.name?.toLowerCase().includes(q) || l.subject?.toLowerCase().includes(q))
+  if (sf) data = data.filter(l => l.status === sf)
+  const tb = document.getElementById('learners-body')
+  if (!data.length) { tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--tx3);padding:32px">No learners found</td></tr>'; return }
+  tb.innerHTML = data.map(l => {
+    const tutor = S.tutors.find(t => t.id === l.tutor_id)
+    return `<tr>
+      <td><div style="display:flex;align-items:center;gap:10px"><div class="avatar">${initials(l.name)}</div><div><div style="font-weight:600">${l.name}</div><div style="font-size:11.5px;color:var(--tx3)">${l.parent_name||''}</div></div></div></td>
+      <td>Grade ${l.grade||'—'}</td>
+      <td>${l.subject||'—'}</td>
+      <td>${tutor?.name||l.tutor?.name||'—'}</td>
+      <td><span class="badge badge-gray">${l.plan||'—'}</span></td>
+      <td style="font-family:'JetBrains Mono',monospace;font-weight:600">${fmt(l.mrr)}</td>
+      <td><div class="progress-bar" style="width:80px"><div class="progress-fill" style="width:${l.progress||0}%"></div></div><span style="font-size:11px;color:var(--tx3);margin-left:6px">${l.progress||0}%</span></td>
+      <td>${statusBadge(l.status)}</td>
+      <td><button class="btn-icon btn-sm" onclick="openLearnerModal('${l.id}')">✎</button> <button class="btn-icon btn-sm" onclick="deleteLearner('${l.id}')">✕</button></td>
+    </tr>`
+  }).join('')
+}
+
+async function loadTutorsData() {
+  const res = await gasRun('serverGet', 'tutors', {})
+  S.tutors = res.data || []
+}
+
+function openLearnerModal(id) {
+  S.editId = id || null
+  S.modalType = 'learner'
+  const l = id ? S.learners.find(x => x.id === id) : {}
+  document.getElementById('modal-title').textContent = id ? 'Edit Learner' : 'Add Learner'
+  const tutorOpts = S.tutors.map(t => `<option value="${t.id}" ${l?.tutor_id===t.id?'selected':''}>${t.name}</option>`).join('')
+  document.getElementById('modal-body').innerHTML = `
+    <div class="form-row"><div class="form-group"><label class="form-label">Full Name</label><input class="form-input" id="f-name" value="${l?.name||''}"></div><div class="form-group"><label class="form-label">Grade</label><input class="form-input" id="f-grade" type="number" value="${l?.grade||''}"></div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Subject</label><input class="form-input" id="f-subject" value="${l?.subject||''}"></div><div class="form-group"><label class="form-label">Tutor</label><select class="form-select" id="f-tutor"><option value="">— Select —</option>${tutorOpts}</select></div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Plan</label><select class="form-select" id="f-plan"><option value="starter" ${l?.plan==='starter'?'selected':''}>Starter</option><option value="standard" ${l?.plan==='standard'?'selected':''}>Standard</option><option value="intensive" ${l?.plan==='intensive'?'selected':''}>Intensive</option><option value="payg" ${l?.plan==='payg'?'selected':''}>PAYG</option></select></div><div class="form-group"><label class="form-label">MRR ($)</label><input class="form-input" id="f-mrr" type="number" value="${l?.mrr||''}"></div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Status</label><select class="form-select" id="f-status"><option value="active" ${l?.status==='active'?'selected':''}>Active</option><option value="paused" ${l?.status==='paused'?'selected':''}>Paused</option><option value="pending" ${l?.status==='pending'?'selected':''}>Pending</option><option value="churned" ${l?.status==='churned'?'selected':''}>Churned</option></select></div><div class="form-group"><label class="form-label">Progress (%)</label><input class="form-input" id="f-progress" type="number" min="0" max="100" value="${l?.progress||0}"></div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Parent Name</label><input class="form-input" id="f-pname" value="${l?.parent_name||''}"></div><div class="form-group"><label class="form-label">Parent Phone</label><input class="form-input" id="f-pphone" value="${l?.parent_phone||''}"></div></div>
+    <div class="form-group"><label class="form-label">Parent Email</label><input class="form-input" id="f-pemail" value="${l?.parent_email||''}"></div>
+    <div class="form-group"><label class="form-label">Notes</label><textarea class="form-textarea" id="f-notes">${l?.notes||''}</textarea></div>`
+  openModal()
+}
+
+async function saveLearner() {
+  const payload = {
+    name: v('f-name'), grade: +v('f-grade'), subject: v('f-subject'), tutor_id: v('f-tutor'),
+    plan: v('f-plan'), mrr: +v('f-mrr'), status: v('f-status'), progress: +v('f-progress'),
+    parent_name: v('f-pname'), parent_phone: v('f-pphone'), parent_email: v('f-pemail'), notes: v('f-notes')
+  }
+  try {
+    let res
+    if (S.editId) res = await gasRun('serverUpdate', 'learners', S.editId, payload)
+    else res = await gasRun('serverCreate', 'learners', payload)
+    if (res.error) { toast(res.error, 'error'); return }
+    toast(S.editId ? 'Learner updated' : 'Learner added', 'success')
+    closeModal()
+    await loadLearners()
+  } catch(e) { toast('Save failed', 'error') }
+}
+
+async function deleteLearner(id) {
+  if (!confirm('Delete this learner?')) return
+  const res = await gasRun('serverDelete', 'learners', id)
+  if (res.error) { toast(res.error, 'error'); return }
+  toast('Learner deleted', 'success')
+  await loadLearners()
+}
+
+// ════════════════════════════════════════════════════════════════
+// TUTORS
+// ════════════════════════════════════════════════════════════════
+async function loadTutors() {
+  const res = await gasRun('serverGet', 'tutors', {})
+  S.tutors = res.data || []
+  renderTutors()
+}
+
+function renderTutors() {
+  const q = (document.getElementById('tutor-search')?.value || '').toLowerCase()
+  let data = S.tutors
+  if (q) data = data.filter(t => t.name?.toLowerCase().includes(q) || (t.subjects||'').toString().toLowerCase().includes(q))
+  const tb = document.getElementById('tutors-body')
+  if (!data.length) { tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--tx3);padding:32px">No tutors found</td></tr>'; return }
+  tb.innerHTML = data.map(t => `<tr>
+    <td><div style="display:flex;align-items:center;gap:10px"><div class="avatar" style="background:var(--purple)">${initials(t.name)}</div><span style="font-weight:600">${t.name}</span></div></td>
+    <td>${t.role||'Tutor'}</td>
+    <td>${(Array.isArray(t.subjects)?t.subjects:String(t.subjects||'').split(',')).map(s=>`<span class="badge badge-blue" style="margin-right:3px">${s.trim()}</span>`).join('')}</td>
+    <td style="font-family:'JetBrains Mono',monospace">${fmt(t.rate_per_session)}</td>
+    <td style="color:var(--tx3)">${t.email||'—'}</td>
+    <td style="color:var(--tx3)">${t.phone||'—'}</td>
+    <td>${t.active||t.active===''?'<span class="badge badge-green">Active</span>':'<span class="badge badge-gray">Inactive</span>'}</td>
+    <td><button class="btn-icon btn-sm" onclick="openTutorModal('${t.id}')">✎</button> <button class="btn-icon btn-sm" onclick="deleteTutor('${t.id}')">✕</button></td>
+  </tr>`).join('')
+}
+
+function openTutorModal(id) {
+  S.editId = id || null; S.modalType = 'tutor'
+  const t = id ? S.tutors.find(x => x.id === id) : {}
+  document.getElementById('modal-title').textContent = id ? 'Edit Tutor' : 'Add Tutor'
+  const subs = Array.isArray(t?.subjects) ? t.subjects.join(', ') : (t?.subjects||'')
+  document.getElementById('modal-body').innerHTML = `
+    <div class="form-row"><div class="form-group"><label class="form-label">Full Name</label><input class="form-input" id="f-name" value="${t?.name||''}"></div><div class="form-group"><label class="form-label">Role</label><input class="form-input" id="f-role" value="${t?.role||'Tutor'}"></div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Email</label><input class="form-input" id="f-email" value="${t?.email||''}"></div><div class="form-group"><label class="form-label">Phone</label><input class="form-input" id="f-phone" value="${t?.phone||''}"></div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Subjects (comma separated)</label><input class="form-input" id="f-subjects" value="${subs}"></div><div class="form-group"><label class="form-label">Rate per Session ($)</label><input class="form-input" id="f-rate" type="number" value="${t?.rate_per_session||''}"></div></div>
+    <div class="form-group"><label class="form-label">Status</label><select class="form-select" id="f-active"><option value="true" ${t?.active!==false?'selected':''}>Active</option><option value="false" ${t?.active===false?'selected':''}>Inactive</option></select></div>`
+  openModal()
+}
+
+async function saveTutor() {
+  const payload = { name: v('f-name'), role: v('f-role'), email: v('f-email'), phone: v('f-phone'), subjects: v('f-subjects'), rate_per_session: +v('f-rate'), active: v('f-active') === 'true' }
+  try {
+    let res
+    if (S.editId) res = await gasRun('serverUpdate', 'tutors', S.editId, payload)
+    else res = await gasRun('serverCreate', 'tutors', payload)
+    if (res.error) { toast(res.error, 'error'); return }
+    toast(S.editId ? 'Tutor updated' : 'Tutor added', 'success')
+    closeModal(); await loadTutors()
+  } catch(e) { toast('Save failed', 'error') }
+}
+
+async function deleteTutor(id) {
+  if (!confirm('Delete this tutor?')) return
+  const res = await gasRun('serverDelete', 'tutors', id)
+  if (res.error) { toast(res.error, 'error'); return }
+  toast('Tutor deleted', 'success'); await loadTutors()
+}
+
+// ════════════════════════════════════════════════════════════════
+// SESSIONS
+// ════════════════════════════════════════════════════════════════
+async function loadSessions() {
+  if (!S.learners.length) { const r = await gasRun('serverGet','learners',{}); S.learners = r.data||[] }
+  if (!S.tutors.length) { const r = await gasRun('serverGet','tutors',{}); S.tutors = r.data||[] }
+  const res = await gasRun('serverGet', 'sessions', {})
+  S.sessions = (res.data||[]).sort((a,b)=>(b.scheduled_at||'').localeCompare(a.scheduled_at||''))
+  renderSessions()
+}
+
+function renderSessions() {
+  const q = (document.getElementById('session-search')?.value||'').toLowerCase()
+  let data = S.sessions
+  if (q) data = data.filter(s=>(s.learner?.name||s.learner_id||'').toLowerCase().includes(q)||(s.subject||'').toLowerCase().includes(q))
+  const tb = document.getElementById('sessions-body')
+  if (!data.length){tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--tx3);padding:32px">No sessions found</td></tr>';return}
+  tb.innerHTML = data.map(s=>{
+    const l = s.learner || S.learners.find(x=>x.id===s.learner_id) || {}
+    const t = s.tutor || S.tutors.find(x=>x.id===s.tutor_id) || {}
+    return `<tr>
+      <td style="font-size:12.5px">${fmtDateTime(s.scheduled_at)}</td>
+      <td style="font-weight:600">${l.name||'—'}</td>
+      <td>${t.name||'—'}</td>
+      <td>${s.subject||'—'}</td>
+      <td>${s.duration_mins||60} min</td>
+      <td>${statusBadge(s.attendance||'present')}</td>
+      <td style="color:var(--tx3);font-size:12.5px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.notes||'—'}</td>
+      <td><button class="btn-icon btn-sm" onclick="openSessionModal('${s.id}')">✎</button></td>
+    </tr>`
+  }).join('')
+}
+
+function openSessionModal(id) {
+  S.editId = id||null; S.modalType='session'
+  const s = id ? S.sessions.find(x=>x.id===id) : {}
+  document.getElementById('modal-title').textContent = id ? 'Edit Session' : 'Log Session'
+  const lOpts = S.learners.map(l=>`<option value="${l.id}" ${s?.learner_id===l.id?'selected':''}>${l.name}</option>`).join('')
+  const tOpts = S.tutors.map(t=>`<option value="${t.id}" ${s?.tutor_id===t.id?'selected':''}>${t.name}</option>`).join('')
+  const dtVal = s?.scheduled_at ? s.scheduled_at.slice(0,16) : ''
+  document.getElementById('modal-body').innerHTML = `
+    <div class="form-row"><div class="form-group"><label class="form-label">Learner</label><select class="form-select" id="f-learner"><option value="">— Select —</option>${lOpts}</select></div><div class="form-group"><label class="form-label">Tutor</label><select class="form-select" id="f-tutor"><option value="">— Select —</option>${tOpts}</select></div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Date & Time</label><input class="form-input" id="f-datetime" type="datetime-local" value="${dtVal}"></div><div class="form-group"><label class="form-label">Duration (mins)</label><input class="form-input" id="f-duration" type="number" value="${s?.duration_mins||60}"></div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Subject</label><input class="form-input" id="f-subject" value="${s?.subject||''}"></div><div class="form-group"><label class="form-label">Attendance</label><select class="form-select" id="f-attendance"><option value="present" ${s?.attendance==='present'?'selected':''}>Present</option><option value="absent" ${s?.attendance==='absent'?'selected':''}>Absent</option><option value="late" ${s?.attendance==='late'?'selected':''}>Late</option><option value="cancelled" ${s?.attendance==='cancelled'?'selected':''}>Cancelled</option></select></div></div>
+    <div class="form-group"><label class="form-label">Notes</label><textarea class="form-textarea" id="f-notes">${s?.notes||''}</textarea></div>`
+  openModal()
+}
+
+async function saveSession() {
+  const payload = { learner_id:v('f-learner'), tutor_id:v('f-tutor'), scheduled_at:v('f-datetime'), duration_mins:+v('f-duration'), subject:v('f-subject'), attendance:v('f-attendance'), notes:v('f-notes') }
+  try {
+    let res
+    if (S.editId) res = await gasRun('serverUpdate','sessions',S.editId,payload)
+    else res = await gasRun('serverCreate','sessions',payload)
+    if(res.error){toast(res.error,'error');return}
+    toast(S.editId?'Session updated':'Session logged','success')
+    closeModal(); await loadSessions()
+  } catch(e){toast('Save failed','error')}
+}
+
+// ════════════════════════════════════════════════════════════════
+// PIPELINE
+// ════════════════════════════════════════════════════════════════
+const STAGES = ['inquiry','matching','trial','active','churned']
+const STAGE_LABELS = {inquiry:'Inquiry',matching:'Matching',trial:'Trial',active:'Active',churned:'Churned'}
+const STAGE_COLORS = {inquiry:'var(--brand)',matching:'var(--purple)',trial:'var(--orange)',active:'var(--green)',churned:'var(--tx3)'}
+
+async function loadPipeline() {
+  const res = await gasRun('serverGet','pipeline',{})
+  S.pipeline = res.data||[]
+  renderPipeline()
+}
+
+function renderPipeline() {
+  const board = document.getElementById('pipeline-board')
+  board.innerHTML = STAGES.map(stage=>{
+    const cards = S.pipeline.filter(p=>p.stage===stage)
+    return `<div class="kanban-col">
+      <div class="kanban-col-header"><span style="color:${STAGE_COLORS[stage]}">${STAGE_LABELS[stage]}</span><span class="kanban-count">${cards.length}</span></div>
+      ${cards.map(p=>`<div class="kanban-card" onclick="openPipelineModal('${p.id}')">
+        <div class="kanban-card-name">${p.parent_name||'—'}</div>
+        <div class="kanban-card-sub">${(Array.isArray(p.subjects)?p.subjects:String(p.subjects||'').split(',')).join(', ')}</div>
+        <div class="kanban-card-sub" style="margin-top:4px">${p.parent_phone||''}</div>
+      </div>`).join('')}
+    </div>`
+  }).join('')
+}
+
+function openPipelineModal(id) {
+  S.editId = id||null; S.modalType='pipeline'
+  const p = id ? S.pipeline.find(x=>x.id===id) : {}
+  document.getElementById('modal-title').textContent = id ? 'Edit Lead' : 'Add Lead'
+  const stageOpts = STAGES.map(s=>`<option value="${s}" ${p?.stage===s?'selected':''}>${STAGE_LABELS[s]}</option>`).join('')
+  const subs = Array.isArray(p?.subjects)?p.subjects.join(', '):(p?.subjects||'')
+  document.getElementById('modal-body').innerHTML = `
+    <div class="form-row"><div class="form-group"><label class="form-label">Parent / Contact Name</label><input class="form-input" id="f-pname" value="${p?.parent_name||''}"></div><div class="form-group"><label class="form-label">Phone</label><input class="form-input" id="f-pphone" value="${p?.parent_phone||''}"></div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Subjects (comma separated)</label><input class="form-input" id="f-subjects" value="${subs}"></div><div class="form-group"><label class="form-label">Stage</label><select class="form-select" id="f-stage">${stageOpts}</select></div></div>
+    <div class="form-group"><label class="form-label">Churn Reason (if churned)</label><input class="form-input" id="f-churn" value="${p?.churn_reason||''}"></div>`
+  openModal()
+}
+
+async function savePipeline() {
+  const payload = { parent_name:v('f-pname'), parent_phone:v('f-pphone'), subjects:v('f-subjects'), stage:v('f-stage'), churn_reason:v('f-churn'), moved_at:new Date().toISOString() }
+  try {
+    let res
+    if(S.editId) res = await gasRun('serverUpdate','pipeline',S.editId,payload)
+    else res = await gasRun('serverCreate','pipeline',payload)
+    if(res.error){toast(res.error,'error');return}
+    toast(S.editId?'Lead updated':'Lead added','success')
+    closeModal(); await loadPipeline()
+  } catch(e){toast('Save failed','error')}
+}
+
+// ════════════════════════════════════════════════════════════════
+// INVOICES
+// ════════════════════════════════════════════════════════════════
+async function loadInvoices() {
+  if(!S.learners.length){const r=await gasRun('serverGet','learners',{});S.learners=r.data||[]}
+  const res = await gasRun('serverGet','invoices',{})
+  S.invoices = res.data||[]
+  renderInvoices()
+}
+
+function renderInvoices() {
+  const q=(document.getElementById('invoice-search')?.value||'').toLowerCase()
+  const sf=document.getElementById('invoice-status-filter')?.value||''
+  let data=S.invoices
+  if(q) data=data.filter(i=>(i.learner?.name||'').toLowerCase().includes(q)||(i.reference||'').toLowerCase().includes(q))
+  if(sf) data=data.filter(i=>i.status===sf)
+  const tb=document.getElementById('invoices-body')
+  if(!data.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--tx3);padding:32px">No invoices found</td></tr>';return}
+  tb.innerHTML=data.map(i=>{
+    const l=i.learner||S.learners.find(x=>x.id===i.learner_id)||{}
+    return `<tr>
+      <td style="font-family:monospace;font-size:12.5px">${i.reference||'—'}</td>
+      <td style="font-weight:600">${l.name||'—'}</td>
+      <td style="color:var(--tx2)">${i.description||'—'}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-weight:600">${fmt(i.amount)}</td>
+      <td>${fmtDate(i.due_date)}</td>
+      <td>${statusBadge(i.status)}</td>
+      <td style="display:flex;gap:4px">
+        ${i.status!=='paid'?`<button class="btn btn-sm btn-primary" onclick="markPaid('${i.id}')">Mark Paid</button>`:''}
+        <button class="btn-icon btn-sm" onclick="openInvoiceModal('${i.id}')">✎</button>
+      </td>
+    </tr>`
+  }).join('')
+}
+
+async function markPaid(id) {
+  const res=await gasRun('serverUpdate','invoices',id,{status:'paid'})
+  if(res.error){toast(res.error,'error');return}
+  toast('Invoice marked paid','success'); await loadInvoices()
+}
+
+function openInvoiceModal(id) {
+  S.editId=id||null; S.modalType='invoice'
+  const i=id?S.invoices.find(x=>x.id===id):{}
+  document.getElementById('modal-title').textContent=id?'Edit Invoice':'New Invoice'
+  const lOpts=S.learners.map(l=>`<option value="${l.id}" ${i?.learner_id===l.id?'selected':''}>${l.name}</option>`).join('')
+  document.getElementById('modal-body').innerHTML=`
+    <div class="form-group"><label class="form-label">Learner</label><select class="form-select" id="f-learner"><option value="">— Select —</option>${lOpts}</select></div>
+    <div class="form-group"><label class="form-label">Description</label><input class="form-input" id="f-desc" value="${i?.description||''}"></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Amount ($)</label><input class="form-input" id="f-amount" type="number" value="${i?.amount||''}"></div><div class="form-group"><label class="form-label">Status</label><select class="form-select" id="f-status"><option value="due" ${i?.status==='due'?'selected':''}>Due</option><option value="overdue" ${i?.status==='overdue'?'selected':''}>Overdue</option><option value="paid" ${i?.status==='paid'?'selected':''}>Paid</option></select></div></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Invoice Date</label><input class="form-input" id="f-idate" type="date" value="${i?.invoice_date||''}"></div><div class="form-group"><label class="form-label">Due Date</label><input class="form-input" id="f-ddate" type="date" value="${i?.due_date||''}"></div></div>`
+  openModal()
+}
+
+async function saveInvoice() {
+  const payload={learner_id:v('f-learner'),description:v('f-desc'),amount:+v('f-amount'),status:v('f-status'),invoice_date:v('f-idate'),due_date:v('f-ddate')}
+  if(!S.editId) payload.reference='INV-'+new Date().getFullYear()+'-'+String(Date.now()).slice(-4)
+  try {
+    let res
+    if(S.editId) res=await gasRun('serverUpdate','invoices',S.editId,payload)
+    else res=await gasRun('serverCreate','invoices',payload)
+    if(res.error){toast(res.error,'error');return}
+    toast(S.editId?'Invoice updated':'Invoice created','success')
+    closeModal(); await loadInvoices()
+  } catch(e){toast('Save failed','error')}
+}
+
+// ════════════════════════════════════════════════════════════════
+// LEDGER
+// ════════════════════════════════════════════════════════════════
+async function loadLedger() {
+  const res=await gasRun('serverGet','ledger',{})
+  S.ledger=(res.data||[]).sort((a,b)=>(b.entry_date||'').localeCompare(a.entry_date||''))
+  renderLedger()
+}
+
+function renderLedger() {
+  const tf=document.getElementById('ledger-type-filter')?.value||''
+  let data=S.ledger
+  if(tf) data=data.filter(e=>e.type===tf)
+  const tb=document.getElementById('ledger-body')
+  if(!data.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--tx3);padding:32px">No entries</td></tr>';return}
+  tb.innerHTML=data.map(e=>`<tr>
+    <td>${fmtDate(e.entry_date)}</td>
+    <td>${e.type==='income'?'<span class="badge badge-green">Income</span>':'<span class="badge badge-red">Expense</span>'}</td>
+    <td style="font-weight:500">${e.description||'—'}</td>
+    <td><span class="badge badge-gray">${e.category||'—'}</span></td>
+    <td style="font-family:'JetBrains Mono',monospace;font-weight:600;color:${e.type==='income'?'var(--green)':'var(--red)'}">${e.type==='income'?'+':'−'}${fmt(e.amount)}</td>
+    <td style="font-family:monospace;font-size:12px;color:var(--tx3)">${e.reference||'—'}</td>
+    <td><button class="btn-icon btn-sm" onclick="deleteLedger('${e.id}')">✕</button></td>
+  </tr>`).join('')
+}
+
+function openLedgerModal() {
+  S.editId=null; S.modalType='ledger'
+  document.getElementById('modal-title').textContent='Add Ledger Entry'
+  document.getElementById('modal-body').innerHTML=`
+    <div class="form-row"><div class="form-group"><label class="form-label">Type</label><select class="form-select" id="f-type"><option value="income">Income</option><option value="expense">Expense</option></select></div><div class="form-group"><label class="form-label">Amount ($)</label><input class="form-input" id="f-amount" type="number"></div></div>
+    <div class="form-group"><label class="form-label">Description</label><input class="form-input" id="f-desc"></div>
+    <div class="form-row"><div class="form-group"><label class="form-label">Category</label><input class="form-input" id="f-cat" placeholder="Tuition, Payroll, Operations…"></div><div class="form-group"><label class="form-label">Date</label><input class="form-input" id="f-date" type="date" value="${new Date().toISOString().slice(0,10)}"></div></div>
+    <div class="form-group"><label class="form-label">Reference</label><input class="form-input" id="f-ref"></div>`
+  openModal()
+}
+
+async function saveLedger() {
+  const payload={type:v('f-type'),amount:+v('f-amount'),description:v('f-desc'),category:v('f-cat'),entry_date:v('f-date'),reference:v('f-ref')}
+  try {
+    const res=await gasRun('serverCreate','ledger',payload)
+    if(res.error){toast(res.error,'error');return}
+    toast('Entry added','success'); closeModal(); await loadLedger()
+  } catch(e){toast('Save failed','error')}
+}
+
+async function deleteLedger(id) {
+  if(!confirm('Delete this entry?'))return
+  const res=await gasRun('serverDelete','ledger',id)
+  if(res.error){toast(res.error,'error');return}
+  toast('Entry deleted','success'); await loadLedger()
+}
+
+// ════════════════════════════════════════════════════════════════
+// PAYROLL
+// ════════════════════════════════════════════════════════════════
+async function loadPayroll() {
+  if(!S.tutors.length){const r=await gasRun('serverGet','tutors',{});S.tutors=r.data||[]}
+  const res=await gasRun('serverGet','payroll',{})
+  S.payroll=res.data||[]
+  renderPayroll()
+}
+
+function renderPayroll() {
+  const tb=document.getElementById('payroll-body')
+  if(!S.payroll.length){tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--tx3);padding:32px">No payroll records</td></tr>';return}
+  tb.innerHTML=S.payroll.map(p=>{
+    const t=p.tutor||S.tutors.find(x=>x.id===p.tutor_id)||{}
+    return `<tr>
+      <td><div style="display:flex;align-items:center;gap:10px"><div class="avatar" style="background:var(--purple)">${initials(t.name)}</div><span style="font-weight:600">${t.name||'—'}</span></div></td>
+      <td style="font-size:12.5px;color:var(--tx3)">${fmtDate(p.period_start)} – ${fmtDate(p.period_end)}</td>
+      <td>${p.sessions_count||0}</td>
+      <td>${fmt(p.rate)}</td>
+      <td>${fmt(p.bonus)}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-weight:700">${fmt(p.gross)}</td>
+      <td>${statusBadge(p.status)}</td>
+      <td>${p.status!=='paid'?`<button class="btn btn-sm btn-primary" onclick="payTutor('${p.id}')">Pay</button>`:fmtDate(p.paid_at)}</td>
+    </tr>`
+  }).join('')
+}
+
+async function payTutor(id) {
+  const res=await gasRun('serverUpdate','payroll',id,{status:'paid',paid_at:new Date().toISOString()})
+  if(res.error){toast(res.error,'error');return}
+  toast('Payment recorded','success'); await loadPayroll()
+}
+
+async function payAll() {
+  const dues=S.payroll.filter(p=>p.status==='due')
+  if(!dues.length){toast('No outstanding payroll','');return}
+  if(!confirm(`Pay all ${dues.length} due amounts?`))return
+  try {
+    await Promise.all(dues.map(p=>gasRun('serverUpdate','payroll',p.id,{status:'paid',paid_at:new Date().toISOString()})))
+    toast('All payments recorded','success'); await loadPayroll()
+  } catch(e){toast('Payment failed','error')}
+}
+
+// ════════════════════════════════════════════════════════════════
+// MODAL
+// ════════════════════════════════════════════════════════════════
+function openModal() { document.getElementById('modal-overlay').classList.add('open') }
+function closeModal(e) {
+  if(e && e.target !== document.getElementById('modal-overlay')) return
+  document.getElementById('modal-overlay').classList.remove('open')
+}
+
+function saveModal() {
+  const t=S.modalType
+  if(t==='learner') saveLearner()
+  else if(t==='tutor') saveTutor()
+  else if(t==='session') saveSession()
+  else if(t==='pipeline') savePipeline()
+  else if(t==='invoice') saveInvoice()
+  else if(t==='ledger') saveLedger()
+}
+
+function topbarAction() { openModal() }
+function v(id) { const el=document.getElementById(id); return el?el.value:'' }
+
+// ── Boot ──────────────────────────────────────────────────────
+loadDashboard()
+</script>
+</body>
+</html>

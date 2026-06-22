@@ -19,17 +19,93 @@ const SHEETS = {
 // ── Entry points ──────────────────────────────────────────────
 
 function doGet(e) {
+  // If sheet param provided → API mode (for external callers)
+  if (e && e.parameter && e.parameter.sheet) {
+    try {
+      const sheet = (e.parameter.sheet || '').toLowerCase()
+      const id = e.parameter.id
+      const params = e.parameter
+      if (!SHEETS[sheet]) return json({ error: 'Unknown sheet: ' + sheet })
+      const data = id ? getById(sheet, id) : getAll(sheet, params)
+      return json({ data, error: null })
+    } catch (err) {
+      return json({ data: null, error: err.message })
+    }
+  }
+  // Otherwise serve the HTML admin portal
+  return HtmlService.createHtmlOutputFromFile('Index')
+    .setTitle('F→A Tutoring Admin')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1')
+}
+
+// ── Functions callable via google.script.run ──────────────────
+
+function serverGet(sheet, filters) {
   try {
-    const sheet = (e.parameter.sheet || '').toLowerCase()
-    const id = e.parameter.id
-    const params = e.parameter
-
-    if (!SHEETS[sheet]) return json({ error: 'Unknown sheet: ' + sheet })
-
-    const data = id ? getById(sheet, id) : getAll(sheet, params)
-    return json({ data, error: null })
+    const data = getAll(sheet, filters || {})
+    return { data, error: null }
   } catch (err) {
-    return json({ data: null, error: err.message })
+    return { data: null, error: err.message }
+  }
+}
+
+function serverCreate(sheet, payload) {
+  try {
+    const data = createRow(sheet, payload)
+    return { data, error: null }
+  } catch (err) {
+    return { data: null, error: err.message }
+  }
+}
+
+function serverUpdate(sheet, id, payload) {
+  try {
+    const data = updateRow(sheet, id, payload)
+    return { data, error: null }
+  } catch (err) {
+    return { data: null, error: err.message }
+  }
+}
+
+function serverDelete(sheet, id) {
+  try {
+    const data = deleteRow(sheet, id)
+    return { data, error: null }
+  } catch (err) {
+    return { data: null, error: err.message }
+  }
+}
+
+function serverDashboard() {
+  try {
+    const learners = sheetToObjects(getSheet('learners'))
+    const sessions = sheetToObjects(getSheet('sessions'))
+    const invoices = sheetToObjects(getSheet('invoices'))
+    const ledger    = sheetToObjects(getSheet('ledger'))
+    const now = new Date()
+    const thisMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0')
+    const mrr = learners.filter(l => l.status === 'active').reduce((s, l) => s + Number(l.mrr || 0), 0)
+    const active_learners = learners.filter(l => l.status === 'active').length
+    const sessions_this_month = sessions.filter(s => (s.scheduled_at || '').startsWith(thisMonth)).length
+    const outstanding_invoices = invoices.filter(i => i.status === 'due' || i.status === 'overdue').length
+    const months = []
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')
+      const label = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
+      const revenue = ledger.filter(e => e.type === 'income' && (e.entry_date || '').startsWith(key)).reduce((s, e) => s + Number(e.amount || 0), 0)
+      const sess = sessions.filter(s => (s.scheduled_at || '').startsWith(key)).length
+      months.push({ month: label, revenue, sessions: sess })
+    }
+    const planCounts = {}
+    learners.filter(l => l.plan).forEach(l => { planCounts[l.plan] = (planCounts[l.plan] || 0) + 1 })
+    const learnerMap = {}
+    learners.forEach(l => learnerMap[l.id] = l)
+    const outstanding = invoices.filter(i => i.status === 'due' || i.status === 'overdue').slice(0, 5).map(i => ({ ...i, learner: learnerMap[i.learner_id] || null }))
+    return { data: { mrr, active_learners, sessions_this_month, outstanding_invoices, months, planCounts, outstanding }, error: null }
+  } catch (err) {
+    return { data: null, error: err.message }
   }
 }
 

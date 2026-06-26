@@ -4,6 +4,8 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>F TO A Tutoring — Diagnostic Report Generator</title>
+<script src="https://unpkg.com/docx@8.5.0/build/index.js"></script>
+<script src="https://unpkg.com/file-saver@2.0.5/dist/FileSaver.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -283,6 +285,7 @@
 <div id="report-wrap">
   <div class="report-actions">
     <button class="btn btn-print" onclick="window.print()">🖨 Print / Save PDF</button>
+    <button class="btn btn-print" style="background:#1e6b3c" onclick="downloadDocx()">⬇ Download DOCX</button>
     <button class="btn btn-primary" onclick="resetForm()">← New Report</button>
   </div>
   <div id="report"></div>
@@ -363,6 +366,7 @@ function resetForm() {
 
 // ── Render ────────────────────────────────────────────────
 function renderReport(d) {
+  window._reportData = d
   const el = document.getElementById('report')
 
   // Profile table rows
@@ -536,6 +540,214 @@ Return ONLY valid JSON — no markdown fences, no extra text. Schema:
   "logistics": [{ "label": "string", "detail": "string" }],
   "nextSteps": [{ "label": "string", "detail": "string" }]
 }`
+
+// ── Download DOCX ─────────────────────────────────────────
+function downloadDocx() {
+  if (!window._reportData) { alert('Generate a report first.'); return; }
+  const d = window._reportData
+  const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+          WidthType, AlignmentType, BorderStyle, HeadingLevel,
+          NumberingFormat, convertInchesToTwip } = docx
+
+  const BORDER = { style: BorderStyle.SINGLE, size: 6, color: '000000' }
+  const ALL_BORDERS = { top: BORDER, bottom: BORDER, left: BORDER, right: BORDER }
+  const NO_BORDER   = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' }
+  const NO_BORDERS  = { top: NO_BORDER, bottom: NO_BORDER, left: NO_BORDER, right: NO_BORDER }
+
+  function cell(text, opts = {}) {
+    return new TableCell({
+      borders: ALL_BORDERS,
+      shading: opts.header ? { fill: 'F2F2F2' } : undefined,
+      children: [new Paragraph({
+        alignment: opts.center ? AlignmentType.CENTER : AlignmentType.LEFT,
+        children: [new TextRun({ text: String(text), bold: !!opts.bold, size: 22 })]
+      })]
+    })
+  }
+
+  function heading(text) {
+    return new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 280, after: 120 },
+      children: [new TextRun({ text, bold: true, underline: {}, size: 24 })]
+    })
+  }
+
+  function headingLeft(text) {
+    return new Paragraph({
+      spacing: { before: 280, after: 100 },
+      children: [new TextRun({ text, bold: true, size: 24 })]
+    })
+  }
+
+  function para(runs) {
+    return new Paragraph({ spacing: { after: 160 }, children: runs })
+  }
+
+  function run(text, opts = {}) {
+    return new TextRun({ text: String(text), bold: !!opts.bold, italics: !!opts.italic, size: 22 })
+  }
+
+  function bullet(runs, level = 0) {
+    return new Paragraph({
+      bullet: { level },
+      spacing: { after: 80 },
+      children: runs
+    })
+  }
+
+  function numbered(runs, ref) {
+    return new Paragraph({
+      numbering: { reference: ref, level: 0 },
+      spacing: { after: 80 },
+      children: runs
+    })
+  }
+
+  // Profile table
+  const profileRows = [
+    ['Name',                d.studentName,        'The focus of this intensive intervention.', false],
+    ['Level',               d.level,              'Intervention is strategically placed at the start of the crucial A-Level journey.', false],
+    ['School',              d.school,             'Aligning intervention with school curriculum pace and requirements.', false],
+    ['Consultation Date',   d.consultationDate,   'Early identification allows for proactive gap bridging before high-stakes exams.', false],
+    ['Academic Motivation', d.motivationRating,   d.motivationSignificance, true],
+  ]
+
+  const profileTable = new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: [
+      new TableRow({ children: [
+        cell('Field',                       { bold: true, center: true, header: true }),
+        cell('Detail',                      { bold: true, center: true, header: true }),
+        cell('Significance for Intervention',{ bold: true, center: true, header: true }),
+      ]}),
+      ...profileRows.map(([f, det, sig, detBold]) => new TableRow({ children: [
+        cell(f,   { bold: true,  center: true }),
+        cell(det, { bold: detBold, center: true }),
+        cell(sig, { center: false }),
+      ]}))
+    ]
+  })
+
+  // Performance gaps table
+  const gapTable = new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    rows: [
+      new TableRow({ children: [
+        cell('Subject',                  { bold: true, center: true, header: true }),
+        cell('Core Challenge Identified',{ bold: true, center: true, header: true }),
+        cell('Specific Symptoms & Context',{ bold: true, center: true, header: true }),
+      ]}),
+      ...(d.performanceGaps ?? []).map(g => new TableRow({ children: [
+        cell(g.subject,   { bold: true, center: true }),
+        cell(g.challenge, { bold: true, center: true }),
+        cell(g.context),
+      ]}))
+    ]
+  })
+
+  // Diagnostic summary numbered list
+  const numRef = 'summaryList'
+  const summaryItems = (d.diagnosticSummary ?? []).map(s =>
+    numbered([run(s.title, { bold: true }), run(' ' + s.detail)], numRef))
+
+  // Prognosis
+  const progParts = d.prognosis.split(/(?<=\.)\s+/)
+  const progPara  = para([run(progParts[0], { bold: true }), run(' ' + progParts.slice(1).join(' '))])
+
+  // Modules
+  const moduleSections = (d.modules ?? []).flatMap(mod => {
+    const items = (mod.items ?? []).flatMap(item => {
+      const subs = (item.subItems ?? []).map(s =>
+        bullet([run(s.label + ': ', { bold: true }), run(s.detail)], 1))
+      return [
+        bullet([run(item.label + ': ', { bold: true }), run(item.detail)]),
+        ...subs
+      ]
+    })
+    return [headingLeft(mod.title), ...items]
+  })
+
+  // Logistics
+  const logItems = (d.logistics ?? []).map(l =>
+    bullet([run(l.label + ': ', { bold: true }), run(l.detail)]))
+
+  // Next steps (numbered)
+  const nsRef   = 'nextStepsList'
+  const nsItems = (d.nextSteps ?? []).map(s =>
+    numbered([run(s.label + ': ', { bold: true }), run(s.detail)], nsRef))
+
+  // History
+  const histParas = (d.detailedHistory ?? '').split('\n').filter(Boolean)
+    .map(p => para([run(p)]))
+
+  const doc = new Document({
+    numbering: {
+      config: [
+        { reference: numRef, levels: [{ level: 0, format: NumberingFormat.DECIMAL, text: '%1.', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 360, hanging: 360 } } } }] },
+        { reference: nsRef,  levels: [{ level: 0, format: NumberingFormat.DECIMAL, text: '%1.', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 360, hanging: 360 } } } }] },
+      ]
+    },
+    sections: [{
+      properties: { page: { margin: { top: convertInchesToTwip(1), bottom: convertInchesToTwip(1), left: convertInchesToTwip(1.2), right: convertInchesToTwip(1.2) } } },
+      children: [
+        // Logo placeholder
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 40 },
+          children: [new TextRun({ text: '[INSERT F TO A TUTORING LOGO HERE]', bold: true, color: '1C8FD6', size: 24 })]
+        }),
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 240 },
+          children: [new TextRun({ text: 'HELPING LEARNERS HELP THEMSELVES', size: 18, color: '1a2744', bold: true })]
+        }),
+
+        // Title
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 200 },
+          children: [new TextRun({ text: `Comprehensive Academic Assessment and Strategic Intervention Plan for ${d.studentName}`, bold: true, size: 26 })]
+        }),
+
+        // Student Profile
+        heading('Student Profile and Preliminary Assessment'),
+        profileTable,
+
+        // Detailed History
+        heading('Detailed History and Academic Examination: Identifying Core Challenges'),
+        ...histParas,
+
+        // Performance Gaps
+        heading('Subject-Specific Performance Gaps'),
+        gapTable,
+
+        // Diagnostic Summary
+        heading('Comprehensive Diagnostic Summary: The Gaps Identified'),
+        para([run(`The assessment reveals ${(d.diagnosticSummary ?? []).length} distinct type${(d.diagnosticSummary ?? []).length !== 1 ? 's' : ''} of learning gaps:`)]),
+        ...summaryItems,
+        progPara,
+
+        // Strategy
+        headingLeft(`Strategic Plan of Action: ${d.strategyName}`),
+        para([run(d.strategyIntro)]),
+        ...moduleSections,
+
+        // Logistics
+        headingLeft('Logistics & Scheduling Parameters'),
+        ...logItems,
+
+        // Next Steps
+        headingLeft('Follow-up and Next Steps: Activation Phase'),
+        ...nsItems,
+      ]
+    }]
+  })
+
+  Packer.toBlob(doc).then(blob => {
+    saveAs(blob, `Diagnostic_Report_${d.studentName.replace(/\s+/g,'_')}.docx`)
+  })
+}
 </script>
 </body>
 </html>

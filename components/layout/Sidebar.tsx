@@ -14,6 +14,7 @@ const nav = [
   { href: '/accounts', label: 'Accounts', icon: '📊' },
   { href: '/broadcast', label: 'Broadcast', icon: '📣' },
   { href: '/reports', label: 'Reports', icon: '📈' },
+  { href: '/diagnostic-report', label: 'Diagnostic', icon: '📋' },
   { href: '/settings', label: 'Settings', icon: '⚙' },
 ]
 

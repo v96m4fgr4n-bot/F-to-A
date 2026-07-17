@@ -73,34 +73,77 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="bg-surface rounded-card border border-border p-5">
-        <h2 className="text-sm font-700 text-tx mb-4">Outstanding Invoices</h2>
-        {loading ? <TableSkeleton rows={3} cols={4} /> : (
-          data?.outstanding?.length === 0 ? (
-            <p className="text-tx-3 text-sm text-center py-6">No outstanding invoices 🎉</p>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  {['Reference', 'Learner', 'Amount', 'Due', 'Status'].map(h => (
-                    <th key={h} className="text-left text-xs text-tx-3 font-600 pb-2">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {data?.outstanding?.map((inv: any) => (
-                  <tr key={inv.id} className="border-b border-border/50 hover:bg-bg transition">
-                    <td className="py-2.5 font-mono text-xs text-tx-2">{inv.reference}</td>
-                    <td className="py-2.5 text-tx font-500">{inv.learner?.name ?? '—'}</td>
-                    <td className="py-2.5 font-mono font-600 text-tx">{formatCurrency(inv.amount)}</td>
-                    <td className="py-2.5 text-tx-2">{formatDate(inv.due_date)}</td>
-                    <td className="py-2.5"><Badge value={inv.status} /></td>
-                  </tr>
+      <div className="grid grid-cols-3 gap-5 mb-5">
+        {/* At-risk widget */}
+        <div className="bg-surface rounded-card border border-border p-5">
+          <h2 className="text-sm font-700 text-tx mb-4">At-Risk Learners</h2>
+          {loading ? <div className="skeleton h-32" /> : (
+            (data?.atRisk ?? []).length === 0 ? (
+              <p className="text-tx-3 text-sm text-center py-6">All learners on track</p>
+            ) : (
+              <div className="space-y-2">
+                {(data?.atRisk ?? []).map((r: any) => (
+                  <div key={r.learnerId} className={`flex items-start gap-2 p-2.5 rounded-btn border ${r.severity === 'high' ? 'bg-red/5 border-red/20' : 'bg-yellow/5 border-yellow/20'}`}>
+                    <span className={`mt-0.5 text-xs ${r.severity === 'high' ? 'text-red' : 'text-yellow'}`}>⚠</span>
+                    <div>
+                      <p className="text-xs font-600 text-tx">{r.name}</p>
+                      <p className="text-[11px] text-tx-3 mt-0.5">{r.flag}</p>
+                    </div>
+                  </div>
                 ))}
-              </tbody>
-            </table>
-          )
-        )}
+              </div>
+            )
+          )}
+        </div>
+
+        {/* Lead sources widget */}
+        <div className="bg-surface rounded-card border border-border p-5">
+          <h2 className="text-sm font-700 text-tx mb-4">Lead Sources</h2>
+          {loading ? <div className="skeleton h-32" /> : (
+            (data?.leadSources ?? []).length === 0 ? (
+              <p className="text-tx-3 text-sm text-center py-6">No pipeline data</p>
+            ) : (
+              <div className="space-y-3">
+                {(data?.leadSources ?? []).map((s: any) => (
+                  <div key={s.source}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-500 text-tx">{s.source}</span>
+                      <span className="text-xs text-tx-3">{s.count} ({s.pct}%)</span>
+                    </div>
+                    <div className="h-1.5 bg-bg rounded-full overflow-hidden">
+                      <div className="h-full bg-brand rounded-full" style={{ width: `${s.pct}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          )}
+        </div>
+
+        {/* Outstanding invoices */}
+        <div className="bg-surface rounded-card border border-border p-5">
+          <h2 className="text-sm font-700 text-tx mb-4">Outstanding Invoices</h2>
+          {loading ? <div className="skeleton h-32" /> : (
+            data?.outstanding?.length === 0 ? (
+              <p className="text-tx-3 text-sm text-center py-6">None outstanding</p>
+            ) : (
+              <div className="space-y-2">
+                {data?.outstanding?.map((inv: any) => (
+                  <div key={inv.id} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
+                    <div>
+                      <p className="text-xs font-600 text-tx">{inv.learner?.name ?? '—'}</p>
+                      <p className="text-[11px] text-tx-3">{formatDate(inv.due_date)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs font-700 text-tx">{formatCurrency(inv.amount)}</p>
+                      <Badge value={inv.status} size="sm" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          )}
+        </div>
       </div>
     </div>
   )

@@ -3,19 +3,55 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
-const nav = [
-  { href: '/dashboard', label: 'Dashboard', icon: '◈' },
-  { href: '/learners', label: 'Learners', icon: '🎓' },
-  { href: '/tutors', label: 'Tutors', icon: '👤' },
-  { href: '/sessions', label: 'Sessions', icon: '📅' },
-  { href: '/pipeline', label: 'Pipeline', icon: '⬡' },
-  { href: '/finances', label: 'Finances', icon: '💳' },
-  { href: '/payroll', label: 'Payroll', icon: '💰' },
-  { href: '/accounts', label: 'Accounts', icon: '📊' },
-  { href: '/broadcast', label: 'Broadcast', icon: '📣' },
-  { href: '/reports', label: 'Reports', icon: '📈' },
-  { href: '/diagnostic-report', label: 'Diagnostic', icon: '📋' },
-  { href: '/settings', label: 'Settings', icon: '⚙' },
+const sections = [
+  {
+    label: 'OVERVIEW',
+    items: [
+      { href: '/dashboard', label: 'Dashboard', icon: '◈' },
+    ],
+  },
+  {
+    label: 'STUDENTS',
+    items: [
+      { href: '/learners', label: 'Learners', icon: '🎓' },
+      { href: '/progress', label: 'Progress', icon: '📈' },
+      { href: '/schedule', label: 'Schedule', icon: '📅' },
+    ],
+  },
+  {
+    label: 'STAFF',
+    items: [
+      { href: '/tutors', label: 'Tutors', icon: '👤' },
+      { href: '/matching', label: 'Matching', icon: '🔗' },
+      { href: '/payroll', label: 'Payroll', icon: '💰' },
+    ],
+  },
+  {
+    label: 'BUSINESS',
+    items: [
+      { href: '/pipeline', label: 'Pipeline', icon: '⬡' },
+      { href: '/finances', label: 'Finances', icon: '💳' },
+      { href: '/accounts', label: 'Accounts', icon: '📊' },
+      { href: '/discounts', label: 'Discounts', icon: '🏷' },
+    ],
+  },
+  {
+    label: 'COMMS',
+    items: [
+      { href: '/sessions', label: 'Sessions', icon: '🗓' },
+      { href: '/broadcast', label: 'Broadcast', icon: '📣' },
+      { href: '/feedback', label: 'Feedback', icon: '⭐' },
+    ],
+  },
+  {
+    label: 'ADMIN',
+    items: [
+      { href: '/contracts', label: 'Contracts', icon: '📄' },
+      { href: '/reports', label: 'Reports', icon: '📊' },
+      { href: '/audit', label: 'Audit Log', icon: '🔍' },
+      { href: '/settings', label: 'Settings', icon: '⚙' },
+    ],
+  },
 ]
 
 export function Sidebar() {
@@ -34,25 +70,30 @@ export function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 py-3 overflow-y-auto">
-        {nav.map(({ href, label, icon }) => {
-          const active = pathname === href || pathname.startsWith(href + '/')
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                'flex items-center gap-3 px-5 py-2.5 mx-2 rounded-btn text-sm font-500 transition-all',
-                active
-                  ? 'bg-white/10 text-white'
-                  : 'text-white/50 hover:text-white/80 hover:bg-white/5'
-              )}
-            >
-              <span className="text-base w-5 text-center">{icon}</span>
-              {label}
-            </Link>
-          )
-        })}
+      <nav className="flex-1 py-2 overflow-y-auto">
+        {sections.map(({ label, items }) => (
+          <div key={label}>
+            <p className="text-white/30 text-[10px] font-700 uppercase tracking-widest px-5 pt-4 pb-1">{label}</p>
+            {items.map(({ href, label: itemLabel, icon }) => {
+              const active = pathname === href || pathname.startsWith(href + '/')
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={cn(
+                    'flex items-center gap-3 px-5 py-2.5 mx-2 rounded-btn text-sm font-500 transition-all',
+                    active
+                      ? 'bg-white/10 text-white'
+                      : 'text-white/50 hover:text-white/80 hover:bg-white/5'
+                  )}
+                >
+                  <span className="text-base w-5 text-center">{icon}</span>
+                  {itemLabel}
+                </Link>
+              )
+            })}
+          </div>
+        ))}
       </nav>
 
       {/* Footer */}

@@ -23,9 +23,14 @@ export default function ReportsPage() {
           <h1 className="text-2xl font-800 text-tx">Reports</h1>
           <p className="text-tx-2 text-sm mt-1">6-month aggregate performance</p>
         </div>
-        <button onClick={() => window.print()} className="px-4 py-2 border border-border rounded-btn text-sm font-600 text-tx-2 hover:text-tx">
+        <a
+          href="/api/reports/export"
+          target="_blank"
+          rel="noreferrer"
+          className="px-4 py-2 bg-brand text-white rounded-btn text-sm font-600 hover:bg-brand-deep transition"
+        >
           Export PDF
-        </button>
+        </a>
       </div>
 
       <div className="grid grid-cols-4 gap-4 mb-7">

@@ -81,16 +81,26 @@ export default function PayrollPage() {
                 <p className="text-tx-3 text-xs mb-1">Status</p>
                 <Badge value={p.status} />
               </div>
-              {p.status === 'due' ? (
-                <button onClick={() => pay(p.id)} className="px-4 py-2 bg-green text-white rounded-btn text-sm font-600 hover:opacity-90">
-                  Pay {p.tutor?.name?.split(' ')[0]}
-                </button>
-              ) : (
-                <div className="text-center">
-                  <p className="text-tx-3 text-xs">Paid</p>
-                  <p className="text-xs text-tx-2">{formatDate(p.paid_at)}</p>
-                </div>
-              )}
+              <div className="flex flex-col gap-2">
+                {p.status === 'due' ? (
+                  <button onClick={() => pay(p.id)} className="px-4 py-2 bg-green text-white rounded-btn text-sm font-600 hover:opacity-90">
+                    Pay {p.tutor?.name?.split(' ')[0]}
+                  </button>
+                ) : (
+                  <div className="text-center">
+                    <p className="text-tx-3 text-xs">Paid</p>
+                    <p className="text-xs text-tx-2">{formatDate(p.paid_at)}</p>
+                  </div>
+                )}
+                <a
+                  href={`/api/payroll/export?id=${p.id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-4 py-1.5 border border-border text-tx-2 rounded-btn text-xs font-600 hover:text-tx hover:bg-bg transition text-center"
+                >
+                  Export PDF
+                </a>
+              </div>
             </div>
           </div>
         ))}

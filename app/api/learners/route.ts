@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
     const search = p.get('search')
     const status = p.get('status')
 
-    let query = db.from('learners').select('*').order('name', { ascending: true })
+    let query = db.from('learners').select('*, tutor:tutors(id, name)').order('name', { ascending: true })
 
     if (search) query = query.or(`name.ilike.%${search}%,subject.ilike.%${search}%`)
     if (status && status !== 'all') query = query.eq('status', status)

@@ -11,7 +11,7 @@ export async function GET() {
     const [learnersRes, sessionsRes, invoicesRes, ledgerRes, pipelineRes, feedbackRes] = await Promise.all([
       db.from('learners').select('id, name, status, plan, mrr, tutor_id'),
       db.from('sessions').select('id, learner_id, tutor_id, scheduled_at, attendance'),
-      db.from('invoices').select('id, learner_id, status, amount, invoice_date, due_date, reference').order('created_at', { ascending: false }),
+      db.from('invoices').select('id, learner_id, status, amount, invoice_date, due_date, reference, learner:learners(id, name)').order('created_at', { ascending: false }),
       db.from('ledger').select('id, type, amount, entry_date'),
       db.from('pipeline').select('id, stage, lead_source'),
       db.from('feedback').select('rating'),

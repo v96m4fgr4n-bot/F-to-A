@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
 
     let query = db
       .from('pipeline')
-      .select('*, tasks:pipeline_tasks(*)')
+      .select('*, tasks:pipeline_tasks(*), learner:learners(id, name)')
       .order('moved_at', { ascending: false })
 
     if (stage && stage !== 'all') query = query.eq('stage', stage)

@@ -1,11 +1,16 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { Badge } from '@/components/ui/Badge'
-import { KpiCard } from '@/components/ui/KpiCard'
 import { Modal } from '@/components/ui/Modal'
-import { TableSkeleton } from '@/components/ui/Skeleton'
 import { useToast } from '@/components/ui/Toast'
+import { Ic } from '@/components/ui/Icon'
 import { formatCurrency, formatDate } from '@/lib/utils'
+
+const PLAN_META: Record<string, { label: string; color: string }> = {
+  intensive: { label: 'Intensive 3×/wk', color: '#E0563B' },
+  standard: { label: 'Standard 2×/wk', color: '#1C8FD6' },
+  starter: { label: 'Starter 1×/wk', color: '#1FA871' },
+  payg: { label: 'Pay-as-you-go', color: '#D4A017' },
+}
 
 export default function FinancesPage() {
   const [invoices, setInvoices] = useState<any[]>([])
@@ -25,9 +30,14 @@ export default function FinancesPage() {
   }
   useEffect(() => { load() }, [statusFilter])
 
-  const mrr = learners.filter(l => l.status === 'active').reduce((s: number, l: any) => s + l.mrr, 0)
-  const outstanding = invoices.filter(i => i.status !== 'paid').reduce((s: number, i: any) => s + i.amount, 0)
-  const collected = invoices.filter(i => i.status === 'paid').reduce((s: number, i: any) => s + i.amount, 0)
+  const active = learners.filter(l => l.status === 'active')
+  const mrr = active.reduce((s: number, l: any) => s + (l.mrr ?? 0), 0)
+  const avgPerLearner = active.length ? Math.round(mrr / active.length) : 0
+
+  const planBreakdown = Object.entries(PLAN_META).map(([id, meta]) => {
+    const group = active.filter(l => l.plan === id)
+    return { id, ...meta, count: group.length, total: group.reduce((s: number, l: any) => s + (l.mrr ?? 0), 0) }
+  }).filter(p => p.count > 0)
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -43,90 +53,100 @@ export default function FinancesPage() {
   return (
     <div>
       {ToastEl}
-      <div className="flex items-center justify-between mb-7">
+      <div className="page-header">
         <div>
-          <h1 className="text-2xl font-800 text-tx">Finances</h1>
-          <p className="text-tx-2 text-sm mt-1">Invoice management & MRR tracking</p>
+          <div className="page-title">Finances</div>
+          <div className="page-sub">Revenue, invoices and plan breakdown</div>
         </div>
-        <button onClick={() => setShowModal(true)} className="bg-brand text-white px-4 py-2 rounded-btn text-sm font-600 hover:bg-brand-deep transition">
-          + Generate Invoice
-        </button>
+        <div className="page-actions">
+          <button className="btn btn-ghost btn-sm">Export CSV</button>
+          <button className="btn btn-primary btn-sm" onClick={() => setShowModal(true)}><Ic n="doc" s={14} /> Generate invoice</button>
+        </div>
       </div>
-
-      <div className="grid grid-cols-3 gap-4 mb-7">
-        <KpiCard label="Monthly Revenue (MRR)" value={formatCurrency(mrr)} accent="bg-green" />
-        <KpiCard label="Collected This Month" value={formatCurrency(collected)} accent="bg-brand" />
-        <KpiCard label="Outstanding" value={formatCurrency(outstanding)} accent="bg-red" />
-      </div>
-
-      <div className="flex gap-1 mb-4">
-        {['all', 'paid', 'due', 'overdue'].map(s => (
-          <button key={s} onClick={() => setStatusFilter(s)}
-            className={`px-3 py-1.5 rounded-btn text-xs font-600 capitalize transition ${statusFilter === s ? 'bg-tx text-white' : 'bg-surface border border-border text-tx-2 hover:text-tx'}`}>
-            {s}
-          </button>
-        ))}
-      </div>
-
-      <div className="bg-surface rounded-card border border-border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border bg-bg">
-              {['Reference', 'Learner', 'Description', 'Amount', 'Invoice Date', 'Due Date', 'Status', ''].map(h => (
-                <th key={h} className="text-left text-xs text-tx-3 font-600 px-4 py-3">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={8} className="p-4"><TableSkeleton rows={5} cols={8} /></td></tr>
-            ) : invoices.length === 0 ? (
-              <tr><td colSpan={8} className="text-center text-tx-3 py-12">No invoices found</td></tr>
-            ) : invoices.map(inv => (
-              <tr key={inv.id} className="border-b border-border/50 hover:bg-bg transition">
-                <td className="px-4 py-3 font-mono text-xs text-tx-2">{inv.reference}</td>
-                <td className="px-4 py-3 font-500 text-tx">{inv.learner?.name ?? '—'}</td>
-                <td className="px-4 py-3 text-tx-2 max-w-[200px] truncate">{inv.description ?? '—'}</td>
-                <td className="px-4 py-3 font-mono font-700 text-tx">{formatCurrency(inv.amount)}</td>
-                <td className="px-4 py-3 text-tx-2">{formatDate(inv.invoice_date)}</td>
-                <td className="px-4 py-3 text-tx-2">{formatDate(inv.due_date)}</td>
-                <td className="px-4 py-3"><Badge value={inv.status} /></td>
-                <td className="px-4 py-3">
-                  {inv.status !== 'paid' && (
-                    <button onClick={() => markPaid(inv.id)} className="text-xs text-green font-600 hover:underline">Mark paid</button>
-                  )}
-                </td>
-              </tr>
+      <div className="page-body">
+        <div className="finance-grid">
+          <div className="mrr-hero">
+            <div className="mrr-label">Monthly recurring revenue</div>
+            <div className="mrr-val">{formatCurrency(mrr)}</div>
+            <div className="mrr-delta"><Ic n="up" s={15} /> +$160 vs last month (+4.3%)</div>
+            <div className="mrr-breakdown">
+              <div className="mrr-bd-item"><div className="mrr-bd-val">{formatCurrency(mrr * 12)}</div><div className="mrr-bd-label">ARR</div></div>
+              <div className="mrr-bd-item"><div className="mrr-bd-val">{formatCurrency(avgPerLearner)}</div><div className="mrr-bd-label">Avg per learner</div></div>
+              <div className="mrr-bd-item"><div className="mrr-bd-val">{active.length}</div><div className="mrr-bd-label">Active learners</div></div>
+            </div>
+          </div>
+          <div className="card">
+            <div style={{ marginBottom: 14 }}><div className="card-title">Plan breakdown</div></div>
+            {planBreakdown.map(p => (
+              <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 0', borderBottom: '1px solid var(--border)' }}>
+                <span style={{ width: 10, height: 10, borderRadius: 3, background: p.color, flexShrink: 0 }}></span>
+                <span style={{ flex: 1, fontSize: 13, fontWeight: 700 }}>{p.label}</span>
+                <span style={{ fontSize: 13, color: 'var(--text-2)' }}>{p.count} learners</span>
+                <span style={{ fontFamily: 'var(--mono)', fontWeight: 800 }}>{formatCurrency(p.total)}</span>
+              </div>
             ))}
-          </tbody>
-        </table>
+            {planBreakdown.length === 0 && !loading && (
+              <div style={{ color: 'var(--text-3)', fontSize: 13, padding: '12px 0' }}>No active plans</div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 10, fontWeight: 800, fontSize: 14 }}>
+              <span>Total MRR</span><span style={{ fontFamily: 'var(--mono)', color: 'var(--blue)' }}>{formatCurrency(mrr)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+            <div><div className="card-title">Invoice history</div><div className="card-sub">{invoices.length} invoices</div></div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {['all', 'paid', 'due', 'overdue'].map(s => (
+                <button key={s} onClick={() => setStatusFilter(s)} className={'month-btn ' + (statusFilter === s ? 'on' : '')} style={{ textTransform: 'capitalize' }}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+          {loading ? (
+            <div className="skeleton" style={{ height: 160, borderRadius: 10 }} />
+          ) : invoices.length === 0 ? (
+            <div style={{ textAlign: 'center', color: 'var(--text-3)', padding: '40px 0', fontSize: 13 }}>No invoices found</div>
+          ) : invoices.map(inv => (
+            <div key={inv.id} className="invoice-row">
+              <div className="inv-icon"><Ic n="doc" s={16} /></div>
+              <div className="inv-main">
+                <div className="inv-name">{inv.learner?.name ?? '—'}</div>
+                <div className="inv-date">{inv.description ?? '—'}{inv.reference ? ' · ' + inv.reference : ''}</div>
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 600, marginRight: 8 }}>{formatDate(inv.due_date)}</div>
+              <div className="inv-amount">{formatCurrency(inv.amount)}</div>
+              <span className={'inv-badge inv-' + inv.status}>{inv.status}</span>
+              {inv.status !== 'paid' && (
+                <button onClick={() => markPaid(inv.id)} className="btn btn-ghost btn-sm">Mark paid</button>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
 
       <Modal open={showModal} onClose={() => setShowModal(false)} title="Generate Invoice">
         <form onSubmit={handleCreate} className="space-y-4">
           <div><label className="block text-xs font-600 text-tx-2 mb-1">Learner *</label>
-            <select required value={form.learner_id} onChange={e => setForm(f => ({ ...f, learner_id: e.target.value }))}
-              className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand">
+            <select required value={form.learner_id} onChange={e => setForm(f => ({ ...f, learner_id: e.target.value }))} className="s-inp">
               <option value="">Select…</option>
               {learners.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
             </select></div>
           <div><label className="block text-xs font-600 text-tx-2 mb-1">Description</label>
-            <input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-              className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" /></div>
+            <input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="s-inp" /></div>
           <div className="grid grid-cols-3 gap-3">
             <div><label className="block text-xs font-600 text-tx-2 mb-1">Amount ($) *</label>
-              <input required type="number" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" /></div>
+              <input required type="number" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} className="s-inp" /></div>
             <div><label className="block text-xs font-600 text-tx-2 mb-1">Invoice Date</label>
-              <input type="date" value={form.invoice_date} onChange={e => setForm(f => ({ ...f, invoice_date: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" /></div>
+              <input type="date" value={form.invoice_date} onChange={e => setForm(f => ({ ...f, invoice_date: e.target.value }))} className="s-inp" /></div>
             <div><label className="block text-xs font-600 text-tx-2 mb-1">Due Date</label>
-              <input type="date" value={form.due_date} onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" /></div>
+              <input type="date" value={form.due_date} onChange={e => setForm(f => ({ ...f, due_date: e.target.value }))} className="s-inp" /></div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 border border-border rounded-btn text-sm text-tx-2">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-brand text-white rounded-btn text-sm font-600">Generate</button>
+            <button type="button" onClick={() => setShowModal(false)} className="btn btn-ghost btn-sm">Cancel</button>
+            <button type="submit" className="btn btn-primary btn-sm">Generate</button>
           </div>
         </form>
       </Modal>

@@ -1,10 +1,11 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { Avatar } from '@/components/ui/Avatar'
-import { Badge } from '@/components/ui/Badge'
-import { KpiCard } from '@/components/ui/KpiCard'
 import { useToast } from '@/components/ui/Toast'
+import { Ic } from '@/components/ui/Icon'
+import { KpiCard } from '@/components/ui/KpiCard'
 import { formatCurrency, formatDate } from '@/lib/utils'
+
+const TUTOR_COLORS = ['#1FA871', '#1C8FD6', '#7A5AF8', '#F26F1F', '#E0563B', '#D4A017']
 
 export default function PayrollPage() {
   const [payroll, setPayroll] = useState<any[]>([])
@@ -29,71 +30,75 @@ export default function PayrollPage() {
   return (
     <div>
       {ToastEl}
-      <div className="flex items-center justify-between mb-7">
+      <div className="page-header">
         <div>
-          <h1 className="text-2xl font-800 text-tx">Payroll</h1>
-          <p className="text-tx-2 text-sm mt-1">June 2026 payout period</p>
+          <div className="page-title">Payroll</div>
+          <div className="page-sub">June 2026 · due Jul 1</div>
         </div>
-        {payroll.some(p => p.status === 'due') && (
-          <button onClick={() => pay()} className="bg-green text-white px-4 py-2 rounded-btn text-sm font-600 hover:opacity-90 transition">
-            Pay All Tutors
-          </button>
-        )}
+        <div className="page-actions">
+          <button className="btn btn-ghost btn-sm">Export payslips</button>
+          {payroll.some(p => p.status === 'due') && (
+            <button className="btn btn-primary btn-sm" onClick={() => pay()}><Ic n="money" s={14} /> Pay all tutors</button>
+          )}
+        </div>
       </div>
+      <div className="page-body">
+        <div style={{ display: 'flex', gap: 14, marginBottom: 20 }}>
+          <KpiCard label="Total due" value={formatCurrency(totalDue)} valueSize={28} className="flex-1" />
+          <KpiCard label="Sessions delivered" value={totalSessions} valueSize={28} className="flex-1" />
+          <KpiCard label="Avg per tutor" value={formatCurrency(avgPerTutor)} valueSize={28} className="flex-1" />
+        </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-7">
-        <KpiCard label="Total Due" value={formatCurrency(totalDue)} accent="bg-orange" />
-        <KpiCard label="Sessions Delivered" value={totalSessions} accent="bg-brand" />
-        <KpiCard label="Avg per Tutor" value={formatCurrency(avgPerTutor)} accent="bg-purple" />
-      </div>
-
-      <div className="space-y-4">
-        {loading ? (
-          Array(3).fill(0).map((_, i) => <div key={i} className="skeleton h-24 rounded-card" />)
-        ) : payroll.map(p => (
-          <div key={p.id} className="bg-surface rounded-card border border-border p-5 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Avatar name={p.tutor?.name ?? 'T'} size="lg" />
-              <div>
-                <p className="font-700 text-tx">{p.tutor?.name ?? '—'}</p>
-                <p className="text-tx-2 text-xs">{formatDate(p.period_start)} — {formatDate(p.period_end)}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-8 text-sm">
-              <div className="text-center">
-                <p className="text-tx-3 text-xs">Sessions</p>
-                <p className="font-700 font-mono text-tx">{p.sessions_count ?? 0}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-tx-3 text-xs">Rate</p>
-                <p className="font-700 font-mono text-tx">${p.rate}/session</p>
-              </div>
-              <div className="text-center">
-                <p className="text-tx-3 text-xs">Bonus</p>
-                <p className="font-700 font-mono text-tx">{formatCurrency(p.bonus ?? 0)}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-tx-3 text-xs">Gross</p>
-                <p className="font-800 font-mono text-xl text-tx">{formatCurrency(p.gross ?? 0)}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-tx-3 text-xs mb-1">Status</p>
-                <Badge value={p.status} />
-              </div>
-              {p.status === 'due' ? (
-                <button onClick={() => pay(p.id)} className="px-4 py-2 bg-green text-white rounded-btn text-sm font-600 hover:opacity-90">
-                  Pay {p.tutor?.name?.split(' ')[0]}
-                </button>
-              ) : (
-                <div className="text-center">
-                  <p className="text-tx-3 text-xs">Paid</p>
-                  <p className="text-xs text-tx-2">{formatDate(p.paid_at)}</p>
+        <div className="payroll-grid">
+          {loading ? (
+            Array(3).fill(0).map((_, i) => <div key={i} className="skeleton" style={{ height: 280, borderRadius: 14 }} />)
+          ) : payroll.map((p, idx) => {
+            const color = TUTOR_COLORS[idx % TUTOR_COLORS.length]
+            const name = p.tutor?.name ?? '—'
+            return (
+              <div className="payroll-card" key={p.id}>
+                <div className="payroll-card-head">
+                  <div className="avatar" style={{ width: 44, height: 44, background: color, fontSize: 14 }}>
+                    {name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)}
+                  </div>
+                  <div>
+                    <div className="payroll-name">{name}</div>
+                    <div className="payroll-role">{formatDate(p.period_start)} — {formatDate(p.period_end)}</div>
+                  </div>
                 </div>
-              )}
-            </div>
-          </div>
-        ))}
+                <div className="payroll-stats">
+                  <div className="ps-item"><div className="ps-val">{p.sessions_count ?? 0}</div><div className="ps-label">Sessions</div></div>
+                  <div className="ps-item"><div className="ps-val" style={{ color }}>{formatCurrency(p.gross ?? 0)}</div><div className="ps-label">Gross pay</div></div>
+                </div>
+                <div className="payout-row"><span className="s-label">Rate</span><span>${p.rate}/session</span></div>
+                {(p.bonus ?? 0) > 0 && <div className="payout-row"><span className="s-label">Bonus</span><span style={{ color: 'var(--green)' }}>+{formatCurrency(p.bonus)}</span></div>}
+                <div className="payout-row"><span className="s-label">Paid</span><span>{p.paid_at ? formatDate(p.paid_at) : '—'}</span></div>
+                <div className="payout-row">
+                  <span className="s-label">Status</span>
+                  <span className={p.status === 'due' ? 'payout-status-due' : 'payout-status-paid'}>
+                    {p.status === 'due' ? '⏱ Due Jul 1' : '✓ Paid'}
+                  </span>
+                </div>
+                {p.status === 'due' ? (
+                  <button className="btn btn-primary btn-sm" style={{ width: '100%', marginTop: 12, justifyContent: 'center' }} onClick={() => pay(p.id)}>
+                    Pay {formatCurrency(p.gross ?? 0)}
+                  </button>
+                ) : (
+                  <a href={`/api/payroll/export?id=${p.id}`} target="_blank" rel="noreferrer"
+                    className="btn btn-ghost btn-sm" style={{ width: '100%', marginTop: 12, justifyContent: 'center', textDecoration: 'none' }}>
+                    Export payslip PDF
+                  </a>
+                )}
+                {p.status === 'due' && (
+                  <a href={`/api/payroll/export?id=${p.id}`} target="_blank" rel="noreferrer"
+                    className="btn btn-ghost btn-sm" style={{ width: '100%', marginTop: 8, justifyContent: 'center', textDecoration: 'none' }}>
+                    Export payslip PDF
+                  </a>
+                )}
+              </div>
+            )
+          })}
+        </div>
       </div>
     </div>
   )

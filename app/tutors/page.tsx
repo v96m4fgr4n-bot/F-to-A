@@ -1,10 +1,13 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { Avatar } from '@/components/ui/Avatar'
-import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { Drawer } from '@/components/ui/Drawer'
 import { useToast } from '@/components/ui/Toast'
+import { Ic } from '@/components/ui/Icon'
+
+const TUTOR_COLORS = ['#1FA871', '#1C8FD6', '#7A5AF8', '#F26F1F', '#E0563B', '#D4A017']
+const GRID = '2fr 1fr 1fr 1fr 1fr'
 
 export default function TutorsPage() {
   const [tutors, setTutors] = useState<any[]>([])
@@ -28,117 +31,105 @@ export default function TutorsPage() {
     setShowModal(false); load(); show('Tutor added')
   }
 
+  const totalAssignments = tutors.reduce((s, t) => s + (t.learner_count ?? 0), 0)
+
   return (
     <div>
       {ToastEl}
-      <div className="flex items-center justify-between mb-7">
+      <div className="page-header">
         <div>
-          <h1 className="text-2xl font-800 text-tx">Tutors</h1>
-          <p className="text-tx-2 text-sm mt-1">{tutors.length} tutors</p>
+          <div className="page-title">Tutors</div>
+          <div className="page-sub">{tutors.length} active tutors · {totalAssignments} total learner assignments</div>
         </div>
-        <button onClick={() => setShowModal(true)} className="bg-brand text-white px-4 py-2 rounded-btn text-sm font-600 hover:bg-brand-deep transition">
-          + Add Tutor
-        </button>
+        <div className="page-actions">
+          <button className="btn btn-primary btn-sm" onClick={() => setShowModal(true)}><Ic n="plus" s={14} /> Add tutor</button>
+        </div>
       </div>
+      <div className="page-body">
+        {loading ? (
+          <div className="tutor-grid">
+            {Array(3).fill(0).map((_, i) => <div key={i} className="skeleton" style={{ height: 220, borderRadius: 14 }} />)}
+          </div>
+        ) : (
+          <div className="tutor-grid">
+            {tutors.map((t, idx) => {
+              const color = TUTOR_COLORS[idx % TUTOR_COLORS.length]
+              return (
+                <div className="tutor-card" key={t.id} onClick={() => setDrawer(t)} style={{ cursor: 'pointer' }}>
+                  <div className="tutor-card-head">
+                    <div className="avatar" style={{ width: 52, height: 52, background: color, fontSize: 16 }}>
+                      {t.name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)}
+                    </div>
+                    <div>
+                      <div className="tutor-name">{t.name}</div>
+                      <div className="tutor-role">{t.role ?? 'Tutor'}</div>
+                      <div className="stars">{'★★★★★'} <span style={{ fontSize: 12, color: 'var(--text-2)', fontWeight: 700 }}>{t.active ? 'Active' : 'Paused'}</span></div>
+                    </div>
+                  </div>
+                  <div className="tutor-stats">
+                    <div className="ts-item"><div className="ts-val" style={{ color }}>{t.learner_count ?? 0}</div><div className="ts-label">Learners</div></div>
+                    <div className="ts-item"><div className="ts-val">{t.session_count ?? 0}</div><div className="ts-label">Sessions/mo</div></div>
+                    <div className="ts-item"><div className="ts-val" style={{ color: 'var(--green)' }}>${t.rate_per_session}</div><div className="ts-label">Per session</div></div>
+                    <div className="ts-item"><div className="ts-val">{(t.subjects ?? []).length}</div><div className="ts-label">Subjects</div></div>
+                  </div>
+                  <div style={{ marginTop: 14 }}>
+                    {(t.subjects ?? []).map((s: string) => (
+                      <span key={s} style={{ display: 'inline-block', fontSize: 11, fontWeight: 700, background: 'var(--bg)', border: '1px solid var(--border)', padding: '2px 8px', borderRadius: 6, marginRight: 5, marginBottom: 4, color: 'var(--text-2)' }}>{s}</span>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
 
-      {loading ? (
-        <div className="grid grid-cols-3 gap-4">
-          {Array(3).fill(0).map((_, i) => <div key={i} className="skeleton h-48 rounded-card" />)}
-        </div>
-      ) : (
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          {tutors.map(t => (
-            <div key={t.id} onClick={() => setDrawer(t)}
-              className="bg-surface rounded-card border border-border p-5 cursor-pointer hover:border-brand/30 hover:shadow-sm transition">
-              <div className="flex items-start gap-3 mb-4">
-                <Avatar name={t.name} size="lg" />
-                <div>
-                  <p className="font-700 text-tx">{t.name}</p>
-                  <p className="text-tx-2 text-xs">{t.role ?? 'Tutor'}</p>
-                  <Badge value={t.active ? 'active' : 'paused'} className="mt-1" />
+        <div className="data-table">
+          <div className="dt-head" style={{ gridTemplateColumns: GRID }}>
+            <span>Tutor</span><span>Learners</span><span>Sessions / mo</span><span>Rate</span><span>Contact</span>
+          </div>
+          {tutors.map((t, idx) => (
+            <div key={t.id} className="dt-row" style={{ gridTemplateColumns: GRID }} onClick={() => setDrawer(t)}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+                <div className="avatar" style={{ width: 36, height: 36, background: TUTOR_COLORS[idx % TUTOR_COLORS.length], fontSize: 13 }}>
+                  {t.name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)}
                 </div>
-              </div>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-tx-3">Learners</span>
-                  <span className="font-600 text-tx">{t.learner_count ?? 0}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-tx-3">Sessions</span>
-                  <span className="font-600 text-tx">{t.session_count ?? 0}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-tx-3">Rate/session</span>
-                  <span className="font-600 font-mono text-tx">${t.rate_per_session}</span>
-                </div>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-1">
-                {(t.subjects ?? []).map((s: string) => (
-                  <span key={s} className="px-2 py-0.5 bg-bg border border-border rounded-full text-xs text-tx-2">{s}</span>
-                ))}
-              </div>
+                <span>
+                  <span style={{ display: 'block', fontWeight: 700 }}>{t.name}</span>
+                  <span style={{ display: 'block', fontSize: 12, color: 'var(--text-3)' }}>{t.role ?? 'Tutor'}</span>
+                </span>
+              </span>
+              <span style={{ fontWeight: 700 }}>{t.learner_count ?? 0}</span>
+              <span style={{ fontWeight: 700 }}>{t.session_count ?? 0}</span>
+              <span style={{ fontWeight: 800, color: 'var(--green)', fontFamily: 'var(--mono)' }}>${t.rate_per_session}</span>
+              <span style={{ color: 'var(--text-2)', fontWeight: 600, fontSize: 12.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.email ?? t.phone ?? '—'}</span>
             </div>
           ))}
         </div>
-      )}
-
-      {/* Table view */}
-      <div className="bg-surface rounded-card border border-border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border bg-bg">
-              {['Tutor', 'Role', 'Email', 'Phone', 'Rate', 'Learners', 'Sessions'].map(h => (
-                <th key={h} className="text-left text-xs text-tx-3 font-600 px-4 py-3">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {tutors.map(t => (
-              <tr key={t.id} onClick={() => setDrawer(t)} className="border-b border-border/50 hover:bg-bg transition cursor-pointer">
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2"><Avatar name={t.name} size="sm" /><span className="font-600 text-tx">{t.name}</span></div>
-                </td>
-                <td className="px-4 py-3 text-tx-2">{t.role ?? '—'}</td>
-                <td className="px-4 py-3 text-tx-2">{t.email ?? '—'}</td>
-                <td className="px-4 py-3 text-tx-2">{t.phone ?? '—'}</td>
-                <td className="px-4 py-3 font-mono font-600 text-tx">${t.rate_per_session}/session</td>
-                <td className="px-4 py-3 text-tx">{t.learner_count ?? 0}</td>
-                <td className="px-4 py-3 text-tx">{t.session_count ?? 0}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
       </div>
 
       <Modal open={showModal} onClose={() => setShowModal(false)} title="Add Tutor">
         <form onSubmit={handleAdd} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div><label className="block text-xs font-600 text-tx-2 mb-1">Name *</label>
-              <input required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" /></div>
+              <input required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="s-inp" /></div>
             <div><label className="block text-xs font-600 text-tx-2 mb-1">Role</label>
-              <input value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" /></div>
+              <input value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} className="s-inp" /></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div><label className="block text-xs font-600 text-tx-2 mb-1">Email</label>
-              <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" /></div>
+              <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className="s-inp" /></div>
             <div><label className="block text-xs font-600 text-tx-2 mb-1">Phone</label>
-              <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" /></div>
+              <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} className="s-inp" /></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div><label className="block text-xs font-600 text-tx-2 mb-1">Subjects (comma-separated)</label>
-              <input value={form.subjects} onChange={e => setForm(f => ({ ...f, subjects: e.target.value }))}
-                placeholder="Maths, Physics" className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" /></div>
+              <input value={form.subjects} onChange={e => setForm(f => ({ ...f, subjects: e.target.value }))} placeholder="Maths, Physics" className="s-inp" /></div>
             <div><label className="block text-xs font-600 text-tx-2 mb-1">Rate per session ($)</label>
-              <input type="number" value={form.rate_per_session} onChange={e => setForm(f => ({ ...f, rate_per_session: Number(e.target.value) }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" /></div>
+              <input type="number" value={form.rate_per_session} onChange={e => setForm(f => ({ ...f, rate_per_session: Number(e.target.value) }))} className="s-inp" /></div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 border border-border rounded-btn text-sm text-tx-2">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-brand text-white rounded-btn text-sm font-600">Add Tutor</button>
+            <button type="button" onClick={() => setShowModal(false)} className="btn btn-ghost btn-sm">Cancel</button>
+            <button type="submit" className="btn btn-primary btn-sm">Add Tutor</button>
           </div>
         </form>
       </Modal>
@@ -161,7 +152,7 @@ export default function TutorsPage() {
             <div>
               <p className="text-xs text-tx-3 font-600 mb-2">Subjects</p>
               <div className="flex flex-wrap gap-1">
-                {(drawer.subjects ?? []).map((s: string) => <span key={s} className="px-2 py-0.5 bg-bg border border-border rounded-full text-xs text-tx-2">{s}</span>)}
+                {(drawer.subjects ?? []).map((s: string) => <span key={s} className="pc-tag">{s}</span>)}
               </div>
             </div>
           </div>

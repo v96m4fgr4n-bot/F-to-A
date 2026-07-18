@@ -8,12 +8,12 @@ import { Drawer } from '@/components/ui/Drawer'
 import { SearchBox } from '@/components/ui/SearchBox'
 import { TableSkeleton } from '@/components/ui/Skeleton'
 import { useToast } from '@/components/ui/Toast'
+import { Ic } from '@/components/ui/Icon'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import type { Learner } from '@/types'
 
-const STATUSES = ['all', 'active', 'paused', 'pending', 'churned']
 const PLANS = ['intensive', 'standard', 'starter', 'payg', 'inquiry']
 const MRR_MAP: Record<string, number> = { intensive: 280, standard: 180, starter: 100, payg: 60, inquiry: 0 }
+const GRID = '2fr 1fr 1.2fr 1fr .9fr .7fr .6fr'
 
 export default function LearnersPage() {
   const [learners, setLearners] = useState<any[]>([])
@@ -56,68 +56,65 @@ export default function LearnersPage() {
     if (res.ok) { load(); show('Updated') }
   }
 
+  const activeMrr = learners.filter(l => l.status === 'active').reduce((s, l) => s + (l.mrr ?? 0), 0)
+
   return (
     <div>
       {ToastEl}
-      <div className="flex items-center justify-between mb-7">
+      <div className="page-header">
         <div>
-          <h1 className="text-2xl font-800 text-tx">Learners</h1>
-          <p className="text-tx-2 text-sm mt-1">{learners.length} learners total</p>
+          <div className="page-title">Learners</div>
+          <div className="page-sub">{learners.length} shown · {formatCurrency(activeMrr)}/mo active revenue</div>
         </div>
-        <button onClick={() => setShowModal(true)} className="bg-brand text-white px-4 py-2 rounded-btn text-sm font-600 hover:bg-brand-deep transition">
-          + Enrol Learner
-        </button>
-      </div>
-
-      {/* Filters */}
-      <div className="flex items-center gap-3 mb-5">
-        <SearchBox placeholder="Search by name or subject…" onSearch={handleSearch} className="w-64" />
-        <div className="flex gap-1">
-          {STATUSES.map(s => (
-            <button key={s} onClick={() => handleStatus(s)}
-              className={`px-3 py-1.5 rounded-btn text-xs font-600 capitalize transition ${status === s ? 'bg-tx text-white' : 'bg-surface border border-border text-tx-2 hover:text-tx'}`}>
-              {s}
-            </button>
-          ))}
+        <div className="page-actions">
+          <SearchBox placeholder="Search learners…" onSearch={handleSearch} />
+          <select
+            style={{ border: '1px solid var(--border)', borderRadius: 9, padding: '8px 12px', fontSize: 13, fontFamily: 'var(--font)', outline: 'none' }}
+            value={status} onChange={e => handleStatus(e.target.value)}>
+            <option value="all">All status</option>
+            <option value="active">Active</option>
+            <option value="paused">Paused</option>
+            <option value="pending">Pending</option>
+            <option value="churned">Churned</option>
+          </select>
+          <button className="btn btn-primary btn-sm" onClick={() => setShowModal(true)}><Ic n="plus" s={14} /> Enrol learner</button>
         </div>
       </div>
-
-      {/* Table */}
-      <div className="bg-surface rounded-card border border-border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border bg-bg">
-              {['Learner', 'Grade', 'Subject', 'Tutor', 'Plan', 'Progress', 'MRR', 'Status'].map(h => (
-                <th key={h} className="text-left text-xs text-tx-3 font-600 px-4 py-3">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={8} className="p-4"><TableSkeleton rows={6} cols={8} /></td></tr>
-            ) : learners.length === 0 ? (
-              <tr><td colSpan={8} className="text-center text-tx-3 py-12">No learners found</td></tr>
-            ) : (
-              learners.map(l => (
-                <tr key={l.id} onClick={() => setDrawer(l)} className="border-b border-border/50 hover:bg-bg transition cursor-pointer">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2.5">
-                      <Avatar name={l.name} size="sm" />
-                      <span className="font-600 text-tx">{l.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-tx-2">{l.grade ? `Grade ${l.grade}` : '—'}</td>
-                  <td className="px-4 py-3 text-tx-2">{l.subject ?? '—'}</td>
-                  <td className="px-4 py-3 text-tx-2">{l.tutor?.name ?? '—'}</td>
-                  <td className="px-4 py-3"><Badge value={l.plan ?? 'inquiry'} /></td>
-                  <td className="px-4 py-3 w-36"><ProgressBar value={l.progress ?? 0} /></td>
-                  <td className="px-4 py-3 font-mono font-600 text-tx">{formatCurrency(l.mrr)}</td>
-                  <td className="px-4 py-3"><Badge value={l.status} /></td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      <div className="page-body">
+        <div className="data-table">
+          <div className="dt-head" style={{ gridTemplateColumns: GRID }}>
+            <span>Learner</span><span>Subject</span><span>Tutor</span><span>Plan</span><span>Progress</span><span>MRR</span><span>Status</span>
+          </div>
+          {loading ? (
+            <div style={{ padding: 16 }}><TableSkeleton rows={6} cols={7} /></div>
+          ) : learners.length === 0 ? (
+            <div style={{ textAlign: 'center', color: 'var(--text-3)', padding: '48px 0', fontSize: 13 }}>No learners found</div>
+          ) : (
+            learners.map(l => (
+              <div key={l.id} className="dt-row" style={{ gridTemplateColumns: GRID }} onClick={() => setDrawer(l)}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+                  <Avatar name={l.name} size="md" />
+                  <span>
+                    <span style={{ display: 'block', fontWeight: 700, fontSize: 13.5 }}>{l.name}</span>
+                    <span style={{ display: 'block', fontSize: 12, color: 'var(--text-3)' }}>{l.grade ? `Grade ${l.grade}` : '—'}</span>
+                  </span>
+                </span>
+                <span style={{ fontSize: 13, color: 'var(--text-2)', fontWeight: 600 }}>{l.subject ?? '—'}</span>
+                <span style={{ fontSize: 13, fontWeight: 600 }}>{l.tutor?.name ?? '—'}</span>
+                <span style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--blue)', textTransform: 'capitalize' }}>{l.plan ?? 'inquiry'}</span>
+                <span>
+                  {l.progress != null
+                    ? <ProgressBar value={l.progress} />
+                    : <span style={{ color: 'var(--text-3)', fontSize: 12 }}>—</span>}
+                </span>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 13, fontWeight: 700, color: (l.mrr ?? 0) > 0 ? 'var(--text)' : 'var(--text-3)' }}>
+                  {(l.mrr ?? 0) > 0 ? formatCurrency(l.mrr) : '—'}
+                </span>
+                <span><Badge value={l.status} /></span>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
       {/* Enrol modal */}
@@ -126,49 +123,42 @@ export default function LearnersPage() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-600 text-tx-2 mb-1">Name *</label>
-              <input required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" />
+              <input required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="s-inp" />
             </div>
             <div>
               <label className="block text-xs font-600 text-tx-2 mb-1">Grade</label>
-              <input type="number" value={form.grade} onChange={e => setForm(f => ({ ...f, grade: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" />
+              <input type="number" value={form.grade} onChange={e => setForm(f => ({ ...f, grade: e.target.value }))} className="s-inp" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-600 text-tx-2 mb-1">Subject</label>
-              <input value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" />
+              <input value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))} className="s-inp" />
             </div>
             <div>
               <label className="block text-xs font-600 text-tx-2 mb-1">Plan</label>
-              <select value={form.plan} onChange={e => setForm(f => ({ ...f, plan: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand">
+              <select value={form.plan} onChange={e => setForm(f => ({ ...f, plan: e.target.value }))} className="s-inp">
                 {PLANS.map(p => <option key={p} value={p} className="capitalize">{p}</option>)}
               </select>
             </div>
           </div>
           <div>
             <label className="block text-xs font-600 text-tx-2 mb-1">Parent Name</label>
-            <input value={form.parent_name} onChange={e => setForm(f => ({ ...f, parent_name: e.target.value }))}
-              className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" />
+            <input value={form.parent_name} onChange={e => setForm(f => ({ ...f, parent_name: e.target.value }))} className="s-inp" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-600 text-tx-2 mb-1">Parent Phone</label>
-              <input value={form.parent_phone} onChange={e => setForm(f => ({ ...f, parent_phone: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" />
+              <input value={form.parent_phone} onChange={e => setForm(f => ({ ...f, parent_phone: e.target.value }))} className="s-inp" />
             </div>
             <div>
               <label className="block text-xs font-600 text-tx-2 mb-1">Parent Email</label>
-              <input type="email" value={form.parent_email} onChange={e => setForm(f => ({ ...f, parent_email: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" />
+              <input type="email" value={form.parent_email} onChange={e => setForm(f => ({ ...f, parent_email: e.target.value }))} className="s-inp" />
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 border border-border rounded-btn text-sm text-tx-2 hover:text-tx">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-brand text-white rounded-btn text-sm font-600 hover:bg-brand-deep">Enrol</button>
+            <button type="button" onClick={() => setShowModal(false)} className="btn btn-ghost btn-sm">Cancel</button>
+            <button type="submit" className="btn btn-primary btn-sm">Enrol</button>
           </div>
         </form>
       </Modal>

@@ -3,7 +3,11 @@ import { useState } from 'react'
 import { useToast } from '@/components/ui/Toast'
 
 export default function SettingsPage() {
-  const [org, setOrg] = useState({ name: 'F-to-A Tutoring', email: 'admin@ftoatutoring.net', phone: '+263771234567', address: 'Harare, Zimbabwe', currency: 'USD' })
+  const [org, setOrg] = useState({
+    name: 'F to A Tutoring', trading: 'F to A', email: 'admin@ftoatutoring.net',
+    phone: '+263771234567', website: 'ftoatutoring.net', address: 'Harare, Zimbabwe',
+    country: 'Zimbabwe', currency: 'USD', timezone: 'Africa/Harare (CAT)',
+  })
   const [notifs, setNotifs] = useState({ new_enrolment: true, payment_received: true, session_reminder: false, overdue_invoice: true })
   const [saving, setSaving] = useState(false)
   const { show, ToastEl } = useToast()
@@ -15,86 +19,92 @@ export default function SettingsPage() {
     show('Settings saved')
   }
 
+  const setField = (k: keyof typeof org) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    setOrg(o => ({ ...o, [k]: e.target.value }))
+
   return (
     <div>
       {ToastEl}
-      <div className="mb-7">
-        <h1 className="text-2xl font-800 text-tx">Settings</h1>
-        <p className="text-tx-2 text-sm mt-1">Organisation and notification configuration</p>
+      <div className="page-header">
+        <div>
+          <div className="page-title">Settings</div>
+          <div className="page-sub">Organisation configuration for F to A Tutoring</div>
+        </div>
+        <div className="page-actions">
+          <button className="btn btn-primary" onClick={save} disabled={saving} style={{ opacity: saving ? .5 : 1 }}>
+            {saving ? 'Saving…' : 'Save changes'}
+          </button>
+        </div>
       </div>
-
-      <div className="max-w-2xl space-y-6">
-        {/* Organisation */}
-        <div className="bg-surface rounded-card border border-border p-6">
-          <h2 className="font-700 text-tx mb-5">Organisation Info</h2>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div><label className="block text-xs font-600 text-tx-2 mb-1">Business Name</label>
-                <input value={org.name} onChange={e => setOrg(o => ({ ...o, name: e.target.value }))}
-                  className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" /></div>
-              <div><label className="block text-xs font-600 text-tx-2 mb-1">Email</label>
-                <input value={org.email} onChange={e => setOrg(o => ({ ...o, email: e.target.value }))}
-                  className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" /></div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div><label className="block text-xs font-600 text-tx-2 mb-1">Phone</label>
-                <input value={org.phone} onChange={e => setOrg(o => ({ ...o, phone: e.target.value }))}
-                  className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" /></div>
-              <div><label className="block text-xs font-600 text-tx-2 mb-1">Currency</label>
-                <select value={org.currency} onChange={e => setOrg(o => ({ ...o, currency: e.target.value }))}
-                  className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand">
-                  <option value="USD">USD ($)</option>
-                  <option value="ZWL">ZWL</option>
-                </select></div>
-            </div>
-            <div><label className="block text-xs font-600 text-tx-2 mb-1">Address</label>
-              <input value={org.address} onChange={e => setOrg(o => ({ ...o, address: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" /></div>
-          </div>
-        </div>
-
-        {/* Notifications */}
-        <div className="bg-surface rounded-card border border-border p-6">
-          <h2 className="font-700 text-tx mb-5">Notifications</h2>
-          <div className="space-y-3">
-            {[
-              ['new_enrolment', 'New enrolment'],
-              ['payment_received', 'Payment received'],
-              ['session_reminder', 'Session reminders'],
-              ['overdue_invoice', 'Overdue invoice alert'],
-            ].map(([key, label]) => (
-              <label key={key} className="flex items-center justify-between cursor-pointer py-2 border-b border-border/50">
-                <span className="text-sm text-tx">{label}</span>
-                <button
-                  onClick={() => setNotifs(n => ({ ...n, [key]: !n[key as keyof typeof n] }))}
-                  className={`w-10 h-5 rounded-full transition-colors relative ${notifs[key as keyof typeof notifs] ? 'bg-brand' : 'bg-border2'}`}>
-                  <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${notifs[key as keyof typeof notifs] ? 'translate-x-5' : 'translate-x-0.5'}`} />
-                </button>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* Integrations */}
-        <div className="bg-surface rounded-card border border-border p-6">
-          <h2 className="font-700 text-tx mb-5">Integrations</h2>
-          <div className="space-y-3 text-sm">
-            {[['Supabase', 'Database', 'Connected'], ['Resend', 'Email', 'Configure'], ['Twilio', 'WhatsApp', 'Configure']].map(([name, type, status]) => (
-              <div key={name} className="flex items-center justify-between py-2 border-b border-border/50">
-                <div>
-                  <p className="font-600 text-tx">{name}</p>
-                  <p className="text-tx-3 text-xs">{type}</p>
-                </div>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-600 ${status === 'Connected' ? 'bg-green/10 text-green' : 'bg-yellow/10 text-yellow'}`}>{status}</span>
+      <div className="page-body">
+        <div className="admin-settings-grid">
+          <div className="card">
+            <div style={{ marginBottom: 16 }}><div className="card-title">Organisation info</div></div>
+            {([
+              ['Business name', 'name'],
+              ['Trading name', 'trading'],
+              ['Contact email', 'email'],
+              ['WhatsApp', 'phone'],
+              ['Website', 'website'],
+              ['Address', 'address'],
+              ['Country', 'country'],
+              ['Timezone', 'timezone'],
+            ] as const).map(([label, key]) => (
+              <div key={key} className="s-row">
+                <span className="s-label">{label}</span>
+                <input className="s-inp" value={org[key]} onChange={setField(key)} />
               </div>
             ))}
+            <div className="s-row">
+              <span className="s-label">Currency</span>
+              <select className="s-inp" value={org.currency} onChange={setField('currency')}>
+                <option value="USD">USD ($)</option>
+                <option value="ZWL">ZWL</option>
+              </select>
+            </div>
           </div>
-        </div>
 
-        <div className="flex justify-end">
-          <button onClick={save} disabled={saving} className="px-6 py-2.5 bg-brand text-white rounded-btn font-600 hover:bg-brand-deep disabled:opacity-50 transition">
-            {saving ? 'Saving…' : 'Save Changes'}
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div className="card">
+              <div style={{ marginBottom: 16 }}><div className="card-title">Admin notifications</div></div>
+              {([
+                ['new_enrolment', 'New enrolment'],
+                ['payment_received', 'Payment received'],
+                ['session_reminder', 'Session reminders'],
+                ['overdue_invoice', 'Overdue invoice alert'],
+              ] as const).map(([key, label]) => (
+                <div key={key} className="s-row">
+                  <span className="s-label" style={{ fontSize: 12.5 }}>{label}</span>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={notifs[key]}
+                      onChange={() => setNotifs(n => ({ ...n, [key]: !n[key] }))}
+                      style={{ accentColor: 'var(--blue)', width: 15, height: 15 }}
+                    />
+                    <span style={{ fontSize: 12, color: 'var(--text-2)', fontWeight: 600 }}>Email + WhatsApp</span>
+                  </label>
+                </div>
+              ))}
+            </div>
+
+            <div className="card">
+              <div style={{ marginBottom: 16 }}><div className="card-title">Integrations</div></div>
+              {[['Supabase', 'Database', 'Connected'], ['Resend', 'Email', 'Configure'], ['Twilio', 'WhatsApp', 'Configure']].map(([name, type, status]) => (
+                <div key={name} className="s-row" style={{ gridTemplateColumns: '1fr auto' }}>
+                  <span>
+                    <span style={{ display: 'block', fontWeight: 700, fontSize: 13.5 }}>{name}</span>
+                    <span style={{ display: 'block', fontSize: 12, color: 'var(--text-3)' }}>{type}</span>
+                  </span>
+                  <span className="pill" style={status === 'Connected'
+                    ? { background: '#E8F5E9', color: 'var(--green)' }
+                    : { background: '#FEF3C7', color: '#b45309' }}>
+                    {status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>

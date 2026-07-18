@@ -52,12 +52,12 @@ export async function GET() {
     const buffer = await renderToBuffer(
       React.createElement(ReportDocument, {
         data: { mrr, active_learners, sessions_this_month, outstanding_invoices, csat, months, planCounts, atRisk, generatedAt: now.toISOString() }
-      })
+      }) as any
     )
 
     const label = now.toLocaleDateString('en-AU', { month: 'short', year: 'numeric' }).replace(' ', '_')
 
-    return new NextResponse(buffer, {
+    return new NextResponse(new Uint8Array(buffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',

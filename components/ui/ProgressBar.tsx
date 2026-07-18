@@ -1,15 +1,15 @@
 'use client'
 import { cn } from '@/lib/utils'
 
-export function ProgressBar({ value, className }: { value: number; className?: string }) {
+export function ProgressBar({ value, color, className }: { value: number; color?: string; className?: string }) {
   const pct = Math.min(100, Math.max(0, value))
-  const color = pct >= 75 ? 'bg-green' : pct >= 40 ? 'bg-yellow' : 'bg-red'
+  const fill = color ?? (pct >= 75 ? 'var(--green)' : pct >= 40 ? 'var(--blue)' : 'var(--orange)')
   return (
-    <div className={cn('flex items-center gap-2', className)}>
-      <div className="flex-1 h-1.5 bg-border rounded-full overflow-hidden">
-        <div className={cn('h-full rounded-full', color)} style={{ width: `${pct}%` }} />
+    <div className={cn('prog-wrap', className)}>
+      <div className="prog-track">
+        <div className="prog-fill" style={{ width: `${pct}%`, background: fill }} />
       </div>
-      <span className="text-xs font-mono text-tx-2 w-8">{pct}%</span>
+      <span className="prog-val">{pct}%</span>
     </div>
   )
 }

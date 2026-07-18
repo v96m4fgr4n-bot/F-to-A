@@ -24,12 +24,18 @@ const config: Config = {
         tx: { DEFAULT: '#15212E', 2: '#5A6B7B', 3: '#92A0AF' },
       },
       fontFamily: {
-        sans: ['Plus Jakarta Sans', 'sans-serif'],
-        mono: ['JetBrains Mono', 'monospace'],
+        sans: ['var(--font-jakarta)', 'Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-jbmono)', 'JetBrains Mono', 'monospace'],
       },
       borderRadius: {
         card: '14px',
         btn: '9px',
+      },
+      boxShadow: {
+        card: '0 1px 3px rgba(16,40,64,.06)',
+        pop: '0 4px 16px rgba(16,40,64,.08)',
+        'btn-blue': '0 2px 8px rgba(28,143,214,.25)',
+        'nav-active': '0 4px 12px rgba(28,143,214,.35)',
       },
     },
   },

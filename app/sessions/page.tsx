@@ -1,10 +1,9 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { Badge } from '@/components/ui/Badge'
-import { Avatar } from '@/components/ui/Avatar'
 import { Modal } from '@/components/ui/Modal'
 import { TableSkeleton } from '@/components/ui/Skeleton'
 import { useToast } from '@/components/ui/Toast'
+import { Ic } from '@/components/ui/Icon'
 import { formatDate, formatTime } from '@/lib/utils'
 
 export default function SessionsPage() {
@@ -45,103 +44,85 @@ export default function SessionsPage() {
   return (
     <div>
       {ToastEl}
-      <div className="flex items-center justify-between mb-7">
+      <div className="page-header">
         <div>
-          <h1 className="text-2xl font-800 text-tx">Sessions</h1>
-          <p className="text-tx-2 text-sm mt-1">{sessions.length} sessions · {rate}% completion rate</p>
+          <div className="page-title">Session log</div>
+          <div className="page-sub">{sessions.length} sessions · {present} completed · {rate}% completion rate</div>
         </div>
-        <button onClick={() => setShowModal(true)} className="bg-brand text-white px-4 py-2 rounded-btn text-sm font-600 hover:bg-brand-deep transition">
-          + Log Session
-        </button>
+        <div className="page-actions">
+          <select
+            style={{ border: '1px solid var(--border)', borderRadius: 9, padding: '8px 12px', fontSize: 13, fontFamily: 'var(--font)', outline: 'none' }}
+            value={tutorFilter} onChange={e => setTutorFilter(e.target.value)}>
+            <option value="">All tutors</option>
+            {tutors.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+          <button className="btn btn-ghost btn-sm">Export CSV</button>
+          <button className="btn btn-primary btn-sm" onClick={() => setShowModal(true)}><Ic n="plus" s={14} /> Log session</button>
+        </div>
       </div>
-
-      <div className="flex items-center gap-3 mb-5">
-        <select value={tutorFilter} onChange={e => setTutorFilter(e.target.value)}
-          className="border border-border rounded-btn px-3 py-2 text-sm text-tx focus:outline-none focus:border-brand">
-          <option value="">All Tutors</option>
-          {tutors.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-        </select>
-      </div>
-
-      <div className="bg-surface rounded-card border border-border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border bg-bg">
-              {['Date', 'Time', 'Student', 'Tutor', 'Subject', 'Duration', 'Attendance', 'Notes'].map(h => (
-                <th key={h} className="text-left text-xs text-tx-3 font-600 px-4 py-3">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={8} className="p-4"><TableSkeleton rows={6} cols={8} /></td></tr>
-            ) : sessions.length === 0 ? (
-              <tr><td colSpan={8} className="text-center text-tx-3 py-12">No sessions logged yet</td></tr>
-            ) : sessions.map(s => (
-              <tr key={s.id} className="border-b border-border/50 hover:bg-bg transition">
-                <td className="px-4 py-3 text-tx-2 font-mono text-xs">{formatDate(s.scheduled_at)}</td>
-                <td className="px-4 py-3 text-tx-2 font-mono text-xs">{formatTime(s.scheduled_at)}</td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <Avatar name={s.learner?.name ?? '?'} size="sm" />
-                    <span className="font-500 text-tx">{s.learner?.name ?? '—'}</span>
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-tx-2">{s.tutor?.name ?? '—'}</td>
-                <td className="px-4 py-3 text-tx-2">{s.subject ?? '—'}</td>
-                <td className="px-4 py-3 text-tx-2">{s.duration_mins}min</td>
-                <td className="px-4 py-3">
-                  <button onClick={() => toggleAttendance(s.id, s.attendance)} title="Click to toggle">
-                    <Badge value={s.attendance} />
-                  </button>
-                </td>
-                <td className="px-4 py-3 text-tx-2 text-xs max-w-[160px] truncate">{s.notes ?? '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="page-body">
+        <div className="data-table">
+          <div className="sessions-log-head">
+            <span>Date</span><span>Student</span><span>Tutor</span><span>Subject</span><span>Duration</span><span>Attendance</span><span>Notes</span>
+          </div>
+          {loading ? (
+            <div style={{ padding: 16 }}><TableSkeleton rows={6} cols={7} /></div>
+          ) : sessions.length === 0 ? (
+            <div style={{ textAlign: 'center', color: 'var(--text-3)', padding: '48px 0', fontSize: 13 }}>No sessions logged yet</div>
+          ) : sessions.map(s => (
+            <div key={s.id} className="sessions-log-row">
+              <span style={{ fontFamily: 'var(--mono)', fontSize: 11.5, color: 'var(--text-2)' }}>
+                {formatDate(s.scheduled_at)}
+                <span style={{ display: 'block', color: 'var(--text-3)' }}>{formatTime(s.scheduled_at)}</span>
+              </span>
+              <span style={{ fontWeight: 700 }}>{s.learner?.name ?? '—'}</span>
+              <span style={{ color: 'var(--text-2)' }}>{s.tutor?.name?.split(' ')[0] ?? '—'}</span>
+              <span style={{ color: 'var(--text-2)', fontSize: 12.5 }}>{s.subject ?? '—'}</span>
+              <span style={{ fontWeight: 600 }}>{s.duration_mins}m</span>
+              <span>
+                <button className={'att-' + s.attendance} onClick={() => toggleAttendance(s.id, s.attendance)} title="Click to toggle" style={{ fontSize: 13 }}>
+                  {String(s.attendance ?? '').charAt(0).toUpperCase() + String(s.attendance ?? '').slice(1)}
+                </button>
+              </span>
+              <span style={{ fontSize: 12, color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.notes ?? '—'}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       <Modal open={showModal} onClose={() => setShowModal(false)} title="Log Session">
         <form onSubmit={handleLog} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div><label className="block text-xs font-600 text-tx-2 mb-1">Learner *</label>
-              <select required value={form.learner_id} onChange={e => setForm(f => ({ ...f, learner_id: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand">
+              <select required value={form.learner_id} onChange={e => setForm(f => ({ ...f, learner_id: e.target.value }))} className="s-inp">
                 <option value="">Select…</option>
                 {learners.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
               </select></div>
             <div><label className="block text-xs font-600 text-tx-2 mb-1">Tutor *</label>
-              <select required value={form.tutor_id} onChange={e => setForm(f => ({ ...f, tutor_id: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand">
+              <select required value={form.tutor_id} onChange={e => setForm(f => ({ ...f, tutor_id: e.target.value }))} className="s-inp">
                 <option value="">Select…</option>
                 {tutors.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div><label className="block text-xs font-600 text-tx-2 mb-1">Date & Time *</label>
-              <input required type="datetime-local" value={form.scheduled_at} onChange={e => setForm(f => ({ ...f, scheduled_at: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" /></div>
+              <input required type="datetime-local" value={form.scheduled_at} onChange={e => setForm(f => ({ ...f, scheduled_at: e.target.value }))} className="s-inp" /></div>
             <div><label className="block text-xs font-600 text-tx-2 mb-1">Duration (mins)</label>
-              <input type="number" value={form.duration_mins} onChange={e => setForm(f => ({ ...f, duration_mins: Number(e.target.value) }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" /></div>
+              <input type="number" value={form.duration_mins} onChange={e => setForm(f => ({ ...f, duration_mins: Number(e.target.value) }))} className="s-inp" /></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div><label className="block text-xs font-600 text-tx-2 mb-1">Subject</label>
-              <input value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" /></div>
+              <input value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))} className="s-inp" /></div>
             <div><label className="block text-xs font-600 text-tx-2 mb-1">Attendance</label>
-              <select value={form.attendance} onChange={e => setForm(f => ({ ...f, attendance: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand">
+              <select value={form.attendance} onChange={e => setForm(f => ({ ...f, attendance: e.target.value }))} className="s-inp">
                 {['present', 'absent', 'late', 'cancelled'].map(a => <option key={a} value={a}>{a}</option>)}
               </select></div>
           </div>
           <div><label className="block text-xs font-600 text-tx-2 mb-1">Notes</label>
-            <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2}
-              className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand resize-none" /></div>
+            <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} className="s-inp" style={{ resize: 'none' }} /></div>
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 border border-border rounded-btn text-sm text-tx-2">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-brand text-white rounded-btn text-sm font-600">Log Session</button>
+            <button type="button" onClick={() => setShowModal(false)} className="btn btn-ghost btn-sm">Cancel</button>
+            <button type="submit" className="btn btn-primary btn-sm">Log Session</button>
           </div>
         </form>
       </Modal>

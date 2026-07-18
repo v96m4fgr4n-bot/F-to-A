@@ -2,14 +2,10 @@
 import { useEffect, useState } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
+import { Ic } from '@/components/ui/Icon'
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-const HOURS = Array.from({ length: 12 }, (_, i) => i + 8) // 8am - 7pm
-
-const TUTOR_COLORS = [
-  'bg-blue-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-400',
-  'bg-pink-500', 'bg-teal-500', 'bg-yellow-500', 'bg-red-500',
-]
+const TUTOR_COLORS = ['#1FA871', '#1C8FD6', '#7A5AF8', '#F26F1F', '#E0563B', '#D4A017']
 
 function getMonday(d: Date) {
   const dt = new Date(d)
@@ -39,7 +35,6 @@ export default function SchedulePage() {
   const [sessions, setSessions] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
-  const [tutorColorMap, setTutorColorMap] = useState<Record<string, string>>({})
   const [form, setForm] = useState({
     learner_id: '', tutor_id: '', subject: '', scheduled_at: '', duration_mins: 60, notes: ''
   })
@@ -55,21 +50,7 @@ export default function SchedulePage() {
     const to = fmtIso(addDays(ws, 6))
     fetch(`/api/schedule?from=${from}&to=${to}`)
       .then(r => r.json())
-      .then(r => {
-        const data = r.data ?? []
-        setSessions(data)
-        // Build tutor colour map
-        const map: Record<string, string> = {}
-        let idx = 0
-        data.forEach((s: any) => {
-          if (s.tutor_id && !map[s.tutor_id]) {
-            map[s.tutor_id] = TUTOR_COLORS[idx % TUTOR_COLORS.length]
-            idx++
-          }
-        })
-        setTutorColorMap(map)
-        setLoading(false)
-      })
+      .then(r => { setSessions(r.data ?? []); setLoading(false) })
       .catch(() => setLoading(false))
   }
 
@@ -83,18 +64,21 @@ export default function SchedulePage() {
   const prevWeek = () => { const ws = addDays(weekStart, -7); setWeekStart(ws); load(ws) }
   const nextWeek = () => { const ws = addDays(weekStart, 7); setWeekStart(ws); load(ws) }
 
-  // Map sessions to day/hour slots
-  const sessionsBySlot: Record<string, any[]> = {}
+  // Stable tutor colour map from tutors list
+  const tutorColor: Record<string, string> = {}
+  tutors.forEach((t, i) => { tutorColor[t.id] = TUTOR_COLORS[i % TUTOR_COLORS.length] })
+
+  // Sessions grouped by weekday (Mon=0)
+  const byDay: Record<number, any[]> = {}
   sessions.forEach(s => {
     const dt = new Date(s.scheduled_at)
-    const dayIdx = ((dt.getDay() + 6) % 7) // Mon=0
-    const hour = dt.getHours()
+    const dayIdx = (dt.getDay() + 6) % 7
     if (dayIdx < 6) {
-      const key = `${dayIdx}-${hour}`
-      if (!sessionsBySlot[key]) sessionsBySlot[key] = []
-      sessionsBySlot[key].push(s)
+      if (!byDay[dayIdx]) byDay[dayIdx] = []
+      byDay[dayIdx].push(s)
     }
   })
+  Object.values(byDay).forEach(list => list.sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()))
 
   const handleBook = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -110,89 +94,73 @@ export default function SchedulePage() {
   return (
     <div>
       {ToastEl}
-      <div className="flex items-center justify-between mb-7">
+      <div className="page-header">
         <div>
-          <h1 className="text-2xl font-800 text-tx">Schedule</h1>
-          <p className="text-tx-2 text-sm mt-1">{fmtDate(weekStart)} – {fmtDate(weekEnd)}</p>
+          <div className="page-title">Schedule</div>
+          <div className="page-sub">Week of {fmtDate(weekStart)} – {fmtDate(weekEnd)} · {sessions.length} sessions logged</div>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex gap-1">
-            <button onClick={prevWeek} className="px-3 py-2 border border-border rounded-btn text-sm text-tx-2 hover:text-tx hover:bg-bg transition">← Prev</button>
-            <button onClick={() => { const ws = getMonday(new Date()); setWeekStart(ws); load(ws) }} className="px-3 py-2 border border-border rounded-btn text-sm text-tx-2 hover:text-tx hover:bg-bg transition">Today</button>
-            <button onClick={nextWeek} className="px-3 py-2 border border-border rounded-btn text-sm text-tx-2 hover:text-tx hover:bg-bg transition">Next →</button>
-          </div>
-          <button onClick={() => setShowModal(true)} className="bg-brand text-white px-4 py-2 rounded-btn text-sm font-600 hover:bg-brand-deep transition">
-            + Book Session
-          </button>
+        <div className="page-actions">
+          <button className="btn btn-ghost btn-sm" onClick={prevWeek}>Prev week</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => { const ws = getMonday(new Date()); setWeekStart(ws); load(ws) }}>Today</button>
+          <button className="btn btn-ghost btn-sm" onClick={nextWeek}>Next week</button>
+          <button className="btn btn-primary btn-sm" onClick={() => setShowModal(true)}><Ic n="plus" s={14} /> Book session</button>
         </div>
       </div>
+      <div className="page-body">
+        {/* Tutor summary strip */}
+        {tutors.length > 0 && (
+          <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+            {tutors.slice(0, 4).map((t, i) => {
+              const c = sessions.filter(s => s.tutor_id === t.id).length
+              return (
+                <div key={t.id} style={{ flex: 1, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 11, padding: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div className="avatar" style={{ width: 38, height: 38, background: TUTOR_COLORS[i % TUTOR_COLORS.length], fontSize: 13 }}>
+                    {t.name.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2)}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13.5 }}>{t.name.split(' ')[0]}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-2)' }}>{c} sessions this week</div>
+                  </div>
+                  <span style={{ fontSize: 11.5, fontWeight: 700, background: '#E8F5E9', color: 'var(--green)', padding: '2px 9px', borderRadius: 6 }}>Available</span>
+                </div>
+              )
+            })}
+          </div>
+        )}
 
-      {/* Legend */}
-      {Object.keys(tutorColorMap).length > 0 && (
-        <div className="flex gap-3 flex-wrap mb-4">
-          {sessions.filter((s, i, arr) => arr.findIndex(x => x.tutor_id === s.tutor_id) === i).map(s => (
-            <div key={s.tutor_id} className="flex items-center gap-1.5 text-xs text-tx-2">
-              <span className={`w-3 h-3 rounded-full ${tutorColorMap[s.tutor_id] ?? 'bg-gray-400'}`} />
-              {s.tutor?.name ?? 'Unknown'}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Calendar grid */}
-      <div className="bg-surface rounded-card border border-border overflow-hidden">
-        {/* Day headers */}
-        <div className="grid border-b border-border" style={{ gridTemplateColumns: '60px repeat(6, 1fr)' }}>
-          <div className="bg-bg border-r border-border" />
+        {/* Week calendar */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 10 }}>
           {DAYS.map((day, i) => {
             const dt = addDays(weekStart, i)
-            const isToday = dt.toDateString() === new Date().toDateString()
+            const today = dt.toDateString() === new Date().toDateString()
+            const ds = byDay[i] ?? []
             return (
-              <div key={day} className={`bg-bg px-3 py-2.5 border-r border-border last:border-r-0 text-center ${i < 5 ? '' : ''}`}>
-                <p className={`text-xs font-700 ${isToday ? 'text-brand' : 'text-tx-2'}`}>{day}</p>
-                <p className={`text-sm font-600 ${isToday ? 'text-brand' : 'text-tx'}`}>{dt.getDate()}</p>
+              <div key={day} className="week-col" style={{ borderColor: today ? 'var(--blue)' : undefined }}>
+                <div className="week-col-head" style={{ background: today ? 'var(--blue)' : undefined, color: today ? '#fff' : undefined }}>
+                  <div style={{ fontSize: 10.5, opacity: .65, marginBottom: 1 }}>{day}</div>
+                  <div>{fmtDate(dt)}</div>
+                </div>
+                <div className="week-col-body">
+                  {loading && <div className="skeleton" style={{ height: 46, borderRadius: 7 }} />}
+                  {!loading && ds.length === 0 && <div style={{ color: 'var(--text-3)', fontSize: 12, textAlign: 'center', paddingTop: 20 }}>No sessions</div>}
+                  {!loading && ds.map((s, j) => {
+                    const c = tutorColor[s.tutor_id] ?? '#888'
+                    const time = new Date(s.scheduled_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+                    return (
+                      <div key={j} className="sesh-block" style={{ background: c + '18', borderLeftColor: c }} title={`${s.learner?.name} · ${s.subject} · ${s.tutor?.name}`}>
+                        <div style={{ color: c, marginBottom: 2 }}>{time} · {s.duration_mins}m</div>
+                        <div style={{ fontWeight: 800, fontSize: 12 }}>{s.learner?.name?.split(' ')[0] ?? '—'}</div>
+                        <div style={{ fontSize: 10.5, color: 'var(--text-3)', marginTop: 1 }}>{s.subject}</div>
+                      </div>
+                    )
+                  })}
+                  <button className="pipeline-add-btn" style={{ marginTop: 4 }} onClick={() => setShowModal(true)}><Ic n="plus" s={11} /> Add</button>
+                </div>
               </div>
             )
           })}
         </div>
-
-        {/* Time slots */}
-        <div className="overflow-y-auto max-h-[600px]">
-          {HOURS.map(hour => (
-            <div key={hour} className="grid border-b border-border/50 last:border-b-0" style={{ gridTemplateColumns: '60px repeat(6, 1fr)', minHeight: '64px' }}>
-              <div className="bg-bg border-r border-border px-2 py-1 text-right">
-                <span className="text-[11px] text-tx-3">{hour}:00</span>
-              </div>
-              {DAYS.map((_, dayIdx) => {
-                const key = `${dayIdx}-${hour}`
-                const slotSessions = sessionsBySlot[key] ?? []
-                return (
-                  <div key={dayIdx} className="border-r border-border/50 last:border-r-0 p-1 relative min-h-[64px]">
-                    {slotSessions.map(s => (
-                      <div
-                        key={s.id}
-                        className={`${tutorColorMap[s.tutor_id] ?? 'bg-gray-400'} bg-opacity-20 border-l-2 ${tutorColorMap[s.tutor_id]?.replace('bg-', 'border-') ?? 'border-gray-400'} rounded p-1 mb-1 cursor-pointer hover:bg-opacity-30 transition`}
-                        title={`${s.learner?.name} • ${s.subject} • ${s.tutor?.name}`}
-                      >
-                        <p className="text-[11px] font-600 text-tx leading-tight truncate">{s.learner?.name ?? 'Unknown'}</p>
-                        <p className="text-[10px] text-tx-2 truncate">{s.subject}</p>
-                      </div>
-                    ))}
-                  </div>
-                )
-              })}
-            </div>
-          ))}
-        </div>
       </div>
-
-      {loading && (
-        <div className="text-center text-tx-3 py-8 text-sm">Loading sessions…</div>
-      )}
-
-      {!loading && sessions.length === 0 && (
-        <div className="text-center text-tx-3 py-8 text-sm">No sessions this week</div>
-      )}
 
       {/* Book Session Modal */}
       <Modal open={showModal} onClose={() => setShowModal(false)} title="Book Session" size="md">
@@ -200,16 +168,14 @@ export default function SchedulePage() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-600 text-tx-2 mb-1">Learner *</label>
-              <select required value={form.learner_id} onChange={e => setForm(f => ({ ...f, learner_id: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand">
+              <select required value={form.learner_id} onChange={e => setForm(f => ({ ...f, learner_id: e.target.value }))} className="s-inp">
                 <option value="">Select learner…</option>
                 {learners.map((l: any) => <option key={l.id} value={l.id}>{l.name}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-xs font-600 text-tx-2 mb-1">Tutor *</label>
-              <select required value={form.tutor_id} onChange={e => setForm(f => ({ ...f, tutor_id: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand">
+              <select required value={form.tutor_id} onChange={e => setForm(f => ({ ...f, tutor_id: e.target.value }))} className="s-inp">
                 <option value="">Select tutor…</option>
                 {tutors.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
@@ -218,28 +184,24 @@ export default function SchedulePage() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-600 text-tx-2 mb-1">Subject *</label>
-              <input required value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" placeholder="e.g. Maths" />
+              <input required value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))} className="s-inp" placeholder="e.g. Maths" />
             </div>
             <div>
               <label className="block text-xs font-600 text-tx-2 mb-1">Duration (mins)</label>
-              <input type="number" value={form.duration_mins} onChange={e => setForm(f => ({ ...f, duration_mins: Number(e.target.value) }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" />
+              <input type="number" value={form.duration_mins} onChange={e => setForm(f => ({ ...f, duration_mins: Number(e.target.value) }))} className="s-inp" />
             </div>
           </div>
           <div>
             <label className="block text-xs font-600 text-tx-2 mb-1">Date & Time *</label>
-            <input required type="datetime-local" value={form.scheduled_at} onChange={e => setForm(f => ({ ...f, scheduled_at: e.target.value }))}
-              className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" />
+            <input required type="datetime-local" value={form.scheduled_at} onChange={e => setForm(f => ({ ...f, scheduled_at: e.target.value }))} className="s-inp" />
           </div>
           <div>
             <label className="block text-xs font-600 text-tx-2 mb-1">Notes</label>
-            <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2}
-              className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand resize-none" />
+            <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} className="s-inp" style={{ resize: 'none' }} />
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 border border-border rounded-btn text-sm text-tx-2 hover:text-tx">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-brand text-white rounded-btn text-sm font-600 hover:bg-brand-deep">Book</button>
+            <button type="button" onClick={() => setShowModal(false)} className="btn btn-ghost btn-sm">Cancel</button>
+            <button type="submit" className="btn btn-primary btn-sm">Book</button>
           </div>
         </form>
       </Modal>

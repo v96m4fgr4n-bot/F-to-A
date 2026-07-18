@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { TableSkeleton } from '@/components/ui/Skeleton'
 import { useToast } from '@/components/ui/Toast'
+import { Ic } from '@/components/ui/Icon'
 import { formatDate } from '@/lib/utils'
 
 const STATUSES = ['all', 'signed', 'pending', 'expired']
@@ -70,93 +71,77 @@ export default function ContractsPage() {
   return (
     <div>
       {ToastEl}
-      <div className="flex items-center justify-between mb-7">
+      <div className="page-header">
         <div>
-          <h1 className="text-2xl font-800 text-tx">Contracts</h1>
-          <p className="text-tx-2 text-sm mt-1">{contracts.length} total contracts</p>
+          <div className="page-title">Contracts</div>
+          <div className="page-sub">Parent agreements, tutor contracts and consent forms</div>
         </div>
-        <button onClick={() => setShowModal(true)} className="bg-brand text-white px-4 py-2 rounded-btn text-sm font-600 hover:bg-brand-deep transition">
-          + Upload Contract
-        </button>
+        <div className="page-actions">
+          <select
+            style={{ border: '1px solid var(--border)', borderRadius: 9, padding: '8px 12px', fontSize: 13, fontFamily: 'var(--font)', outline: 'none', textTransform: 'capitalize' }}
+            value={statusFilter} onChange={e => handleStatusFilter(e.target.value)}>
+            {STATUSES.map(s => <option key={s} value={s}>{s === 'all' ? 'All statuses' : s}</option>)}
+          </select>
+          <button className="btn btn-ghost btn-sm">Send e-sign request</button>
+          <button className="btn btn-primary btn-sm" onClick={() => setShowModal(true)}><Ic n="plus" s={14} /> Upload document</button>
+        </div>
       </div>
+      <div className="page-body">
+        <div style={{ display: 'flex', gap: 14, marginBottom: 16 }}>
+          {([
+            ['Signed', signed, 'var(--green)'],
+            ['Pending', pending, 'var(--orange)'],
+            ['Expired', expired, 'var(--red)'],
+          ] as const).map(([l, v, c]) => (
+            <div key={l} className="kpi-card blue" style={{ flex: 1 }}>
+              <div className="kpi-label">{l}</div>
+              <div className="kpi-val" style={{ fontSize: 28, color: c }}>{v}</div>
+            </div>
+          ))}
+        </div>
 
-      <div className="grid grid-cols-3 gap-4 mb-5">
-        {[
-          { label: 'Signed', value: signed, color: 'text-green' },
-          { label: 'Pending', value: pending, color: 'text-yellow' },
-          { label: 'Expired', value: expired, color: 'text-red' },
-        ].map(k => (
-          <div key={k.label} className="bg-surface rounded-card border border-border p-5">
-            <p className="text-xs text-tx-3 font-600 mb-1">{k.label}</p>
-            <p className={`text-3xl font-800 ${k.color}`}>{k.value}</p>
+        <div className="data-table">
+          <div className="contract-head">
+            <span>Party</span><span>Document type</span><span>Uploaded</span><span>Expires</span><span>Status</span><span></span>
           </div>
-        ))}
-      </div>
-
-      <div className="flex gap-1 mb-5">
-        {STATUSES.map(s => (
-          <button key={s} onClick={() => handleStatusFilter(s)}
-            className={`px-3 py-1.5 rounded-btn text-xs font-600 capitalize transition ${statusFilter === s ? 'bg-tx text-white' : 'bg-surface border border-border text-tx-2 hover:text-tx'}`}>
-            {s}
-          </button>
-        ))}
-      </div>
-
-      <div className="bg-surface rounded-card border border-border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border bg-bg">
-              {['Entity', 'Type', 'Document', 'Uploaded', 'Expires', 'Status', 'Actions'].map(h => (
-                <th key={h} className="text-left text-xs text-tx-3 font-600 px-4 py-3">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={7} className="p-4"><TableSkeleton rows={5} cols={7} /></td></tr>
-            ) : contracts.length === 0 ? (
-              <tr><td colSpan={7} className="text-center text-tx-3 py-10">No contracts found</td></tr>
-            ) : contracts.map(c => (
-              <tr key={c.id} className="border-b border-border/50 hover:bg-bg transition">
-                <td className="px-4 py-3">
-                  <p className="font-600 text-tx">{c.entity_name ?? c.learner?.name ?? c.tutor?.name ?? '—'}</p>
-                  <p className="text-tx-3 text-xs capitalize">{c.entity_type}</p>
-                </td>
-                <td className="px-4 py-3 text-tx-2 text-xs">{c.document_type ?? '—'}</td>
-                <td className="px-4 py-3">
-                  {c.file_url ? (
-                    <a href={c.file_url} target="_blank" rel="noopener noreferrer" className="text-brand text-xs font-600 hover:underline">View ↗</a>
-                  ) : <span className="text-tx-3 text-xs">—</span>}
-                </td>
-                <td className="px-4 py-3 text-tx-2 text-xs">{formatDate(c.uploaded_at)}</td>
-                <td className="px-4 py-3 text-tx-2 text-xs">{c.expires_at ? formatDate(c.expires_at) : '—'}</td>
-                <td className="px-4 py-3"><Badge value={c.status} /></td>
-                <td className="px-4 py-3">
-                  <div className="flex gap-1">
-                    {c.status === 'pending' && (
-                      <>
-                        <button onClick={() => handlePatch(c.id, { status: 'signed', signed_at: new Date().toISOString() })}
-                          className="text-xs px-2 py-1 rounded-btn border border-green text-green hover:bg-green/10 transition">
-                          Signed
-                        </button>
-                        <button onClick={() => handleSendEsign(c)}
-                          className="text-xs px-2 py-1 rounded-btn border border-border text-tx-2 hover:text-tx transition">
-                          E-Sign
-                        </button>
-                      </>
-                    )}
-                    {c.status === 'signed' && (
-                      <button onClick={() => handlePatch(c.id, { status: 'expired' })}
-                        className="text-xs px-2 py-1 rounded-btn border border-border text-tx-3 hover:text-red hover:border-red transition">
-                        Expire
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+          {loading ? (
+            <div style={{ padding: 16 }}><TableSkeleton rows={5} cols={6} /></div>
+          ) : contracts.length === 0 ? (
+            <div style={{ textAlign: 'center', color: 'var(--text-3)', padding: '40px 0', fontSize: 13 }}>No contracts found</div>
+          ) : contracts.map(c => (
+            <div key={c.id} className="contract-row">
+              <span>
+                <span style={{ display: 'block', fontWeight: 700 }}>{c.entity_name ?? c.learner?.name ?? c.tutor?.name ?? '—'}</span>
+                <span style={{ display: 'block', fontSize: 12, color: 'var(--text-3)', textTransform: 'capitalize' }}>{c.entity_type}</span>
+              </span>
+              <span style={{ color: 'var(--text-2)', fontSize: 13 }}>
+                {c.document_type ?? '—'}
+                {c.file_url && (
+                  <a href={c.file_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--blue)', fontSize: 12, fontWeight: 700, marginLeft: 6, textDecoration: 'none' }}>View ↗</a>
+                )}
+              </span>
+              <span style={{ fontSize: 12, color: 'var(--text-3)', fontFamily: 'var(--mono)' }}>{formatDate(c.uploaded_at)}</span>
+              <span style={{ fontSize: 12, color: c.status === 'expired' ? 'var(--red)' : c.expires_at ? 'var(--text-2)' : 'var(--text-3)', fontWeight: c.status === 'expired' ? 700 : 400 }}>
+                {c.expires_at ? formatDate(c.expires_at) : '—'}
+              </span>
+              <span><Badge value={c.status} /></span>
+              <span style={{ display: 'flex', gap: 4 }}>
+                {c.status === 'pending' && (
+                  <>
+                    <button className="btn btn-ghost btn-sm" style={{ color: 'var(--green)', borderColor: 'var(--green)' }}
+                      onClick={() => handlePatch(c.id, { status: 'signed', signed_at: new Date().toISOString() })}>
+                      Signed
+                    </button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => handleSendEsign(c)}>E-Sign</button>
+                  </>
+                )}
+                {c.status === 'signed' && (
+                  <button className="btn btn-ghost btn-sm" onClick={() => handlePatch(c.id, { status: 'expired' })}>Expire</button>
+                )}
+              </span>
+            </div>
+          ))}
+        </div>
       </div>
 
       <Modal open={showModal} onClose={() => setShowModal(false)} title="Upload Contract" size="md">
@@ -164,13 +149,11 @@ export default function ContractsPage() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-600 text-tx-2 mb-1">Entity Name *</label>
-              <input required value={form.entity_name} onChange={e => setForm(f => ({ ...f, entity_name: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" />
+              <input required value={form.entity_name} onChange={e => setForm(f => ({ ...f, entity_name: e.target.value }))} className="s-inp" />
             </div>
             <div>
               <label className="block text-xs font-600 text-tx-2 mb-1">Entity Type</label>
-              <select value={form.entity_type} onChange={e => setForm(f => ({ ...f, entity_type: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand">
+              <select value={form.entity_type} onChange={e => setForm(f => ({ ...f, entity_type: e.target.value }))} className="s-inp">
                 <option value="learner">Learner</option>
                 <option value="tutor">Tutor</option>
                 <option value="other">Other</option>
@@ -180,8 +163,7 @@ export default function ContractsPage() {
           {form.entity_type === 'learner' && (
             <div>
               <label className="block text-xs font-600 text-tx-2 mb-1">Link to Learner</label>
-              <select value={form.learner_id} onChange={e => setForm(f => ({ ...f, learner_id: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand">
+              <select value={form.learner_id} onChange={e => setForm(f => ({ ...f, learner_id: e.target.value }))} className="s-inp">
                 <option value="">— optional —</option>
                 {learners.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
               </select>
@@ -190,8 +172,7 @@ export default function ContractsPage() {
           {form.entity_type === 'tutor' && (
             <div>
               <label className="block text-xs font-600 text-tx-2 mb-1">Link to Tutor</label>
-              <select value={form.tutor_id} onChange={e => setForm(f => ({ ...f, tutor_id: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand">
+              <select value={form.tutor_id} onChange={e => setForm(f => ({ ...f, tutor_id: e.target.value }))} className="s-inp">
                 <option value="">— optional —</option>
                 {tutors.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
@@ -199,25 +180,21 @@ export default function ContractsPage() {
           )}
           <div>
             <label className="block text-xs font-600 text-tx-2 mb-1">Document Type</label>
-            <select value={form.document_type} onChange={e => setForm(f => ({ ...f, document_type: e.target.value }))}
-              className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand">
+            <select value={form.document_type} onChange={e => setForm(f => ({ ...f, document_type: e.target.value }))} className="s-inp">
               {DOC_TYPES.map(d => <option key={d} value={d}>{d}</option>)}
             </select>
           </div>
           <div>
             <label className="block text-xs font-600 text-tx-2 mb-1">File URL (Supabase Storage)</label>
-            <input value={form.file_url} onChange={e => setForm(f => ({ ...f, file_url: e.target.value }))}
-              placeholder="https://…"
-              className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" />
+            <input value={form.file_url} onChange={e => setForm(f => ({ ...f, file_url: e.target.value }))} placeholder="https://…" className="s-inp" />
           </div>
           <div>
             <label className="block text-xs font-600 text-tx-2 mb-1">Expiry Date</label>
-            <input type="date" value={form.expires_at} onChange={e => setForm(f => ({ ...f, expires_at: e.target.value }))}
-              className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" />
+            <input type="date" value={form.expires_at} onChange={e => setForm(f => ({ ...f, expires_at: e.target.value }))} className="s-inp" />
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 border border-border rounded-btn text-sm text-tx-2 hover:text-tx">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-brand text-white rounded-btn text-sm font-600 hover:bg-brand-deep">Upload</button>
+            <button type="button" onClick={() => setShowModal(false)} className="btn btn-ghost btn-sm">Cancel</button>
+            <button type="submit" className="btn btn-primary btn-sm">Upload</button>
           </div>
         </form>
       </Modal>

@@ -1,12 +1,12 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { KpiCard } from '@/components/ui/KpiCard'
-import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
+import { Ic } from '@/components/ui/Icon'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const LEDGER_GRID = '110px 2.5fr .9fr 1fr .8fr'
 
 export default function AccountsPage() {
   const now = new Date()
@@ -52,145 +52,175 @@ export default function AccountsPage() {
     a.click()
   }
 
-  const EntryTable = ({ entries }: { entries: any[] }) => (
-    <table className="w-full text-sm">
-      <thead>
-        <tr className="border-b border-border bg-bg">
-          {['Date', 'Description', 'Category', 'Amount', 'Reference'].map(h => (
-            <th key={h} className="text-left text-xs text-tx-3 font-600 px-4 py-3">{h}</th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {entries.length === 0 ? (
-          <tr><td colSpan={5} className="text-center text-tx-3 py-8">No entries</td></tr>
-        ) : entries.map(e => (
-          <tr key={e.id} className="border-b border-border/50 hover:bg-bg transition">
-            <td className="px-4 py-3 font-mono text-xs text-tx-2">{formatDate(e.entry_date)}</td>
-            <td className="px-4 py-3 text-tx font-500">{e.description}</td>
-            <td className="px-4 py-3 text-tx-2">{e.category ?? '—'}</td>
-            <td className={`px-4 py-3 font-mono font-700 ${e.type === 'income' ? 'text-green' : 'text-red'}`}>
-              {e.type === 'income' ? '+' : '-'}{formatCurrency(e.amount)}
-            </td>
-            <td className="px-4 py-3 font-mono text-xs text-tx-3">{e.reference ?? '—'}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+  const Ledger = ({ entries, kind }: { entries: any[]; kind: 'income' | 'expense' }) => (
+    <div className="data-table">
+      <div className="ledger-head" style={{ gridTemplateColumns: LEDGER_GRID }}>
+        <span>Date</span><span>Description</span><span>Category</span><span>Reference</span><span style={{ textAlign: 'right' }}>Amount</span>
+      </div>
+      {entries.length === 0 ? (
+        <div style={{ textAlign: 'center', color: 'var(--text-3)', padding: '32px 0', fontSize: 13 }}>No entries</div>
+      ) : entries.map(e => (
+        <div key={e.id} className={`ledger-row ${kind === 'income' ? 'income-row' : 'expense-row'}`} style={{ gridTemplateColumns: LEDGER_GRID }}>
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--text-2)' }}>{formatDate(e.entry_date)}</span>
+          <span style={{ fontWeight: 700, fontSize: 13.5 }}>{e.description}</span>
+          <span>
+            <span style={{ fontSize: 11.5, fontWeight: 700, background: kind === 'income' ? '#E8F5E9' : '#FEE2E2', color: kind === 'income' ? 'var(--green)' : 'var(--red)', padding: '2px 8px', borderRadius: 5 }}>
+              {e.category ?? '—'}
+            </span>
+          </span>
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--text-3)' }}>{e.reference ?? '—'}</span>
+          <span className={kind === 'income' ? 'ledger-amount-pos' : 'ledger-amount-neg'} style={{ textAlign: 'right' }}>
+            {kind === 'income' ? '+' : '-'}{formatCurrency(e.amount)}
+          </span>
+        </div>
+      ))}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '14px 18px', borderTop: '2px solid var(--border)', fontFamily: 'var(--mono)', fontWeight: 800, fontSize: 16, color: kind === 'income' ? 'var(--green)' : 'var(--red)' }}>
+        Total: {kind === 'income' ? '+' : '-'}{formatCurrency(kind === 'income' ? totalIncome : totalExpenses)}
+      </div>
+    </div>
   )
 
   return (
     <div>
       {ToastEl}
-      <div className="flex items-center justify-between mb-7">
+      <div className="page-header">
         <div>
-          <h1 className="text-2xl font-800 text-tx">Accounts</h1>
-          <p className="text-tx-2 text-sm mt-1">P&L and ledger for {MONTHS[month]} {year}</p>
+          <h1 className="page-title">Accounts</h1>
+          <p className="page-sub">Bookkeeping data for F to A Tutoring · {MONTHS[month]} {year}</p>
         </div>
-        <div className="flex gap-2">
-          <button onClick={() => exportCSV('income')} className="px-3 py-2 border border-border rounded-btn text-xs font-600 text-tx-2 hover:text-tx">Income CSV</button>
-          <button onClick={() => exportCSV('expense')} className="px-3 py-2 border border-border rounded-btn text-xs font-600 text-tx-2 hover:text-tx">Expenses CSV</button>
-          <button onClick={() => exportCSV('all')} className="px-3 py-2 bg-brand text-white rounded-btn text-xs font-600 hover:bg-brand-deep">Full Ledger CSV</button>
+        <div className="page-actions">
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {MONTHS.slice(0, now.getMonth() + 1).map((m, i) => (
+              <button key={m} className={'month-btn ' + (month === i ? 'on' : '')} onClick={() => setMonth(i)}>{m}</button>
+            ))}
+          </div>
         </div>
       </div>
+      <div className="page-body">
 
-      {/* Month selector */}
-      <div className="flex gap-1 mb-6 flex-wrap">
-        {MONTHS.slice(0, now.getMonth() + 1).map((m, i) => (
-          <button key={m} onClick={() => setMonth(i)}
-            className={`px-3 py-1.5 rounded-btn text-xs font-600 transition ${month === i ? 'bg-tx text-white' : 'bg-surface border border-border text-tx-2 hover:text-tx'}`}>
-            {m}
-          </button>
-        ))}
-      </div>
+        {/* Export bar */}
+        <div className="export-bar">
+          <div className="export-bar-info">
+            <div className="export-bar-title">📊 Accountant export — {MONTHS[month]} {year}</div>
+            <div className="export-bar-sub">All ledger entries for your accountant or accounting software (Xero, QuickBooks, Sage, Pastel)</div>
+          </div>
+          <button className="btn btn-ghost btn-sm" onClick={() => exportCSV('income')}><Ic n="doc" s={14} /> Income CSV</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => exportCSV('expense')}><Ic n="doc" s={14} /> Expenses CSV</button>
+          <button className="btn btn-primary" onClick={() => exportCSV('all')}><Ic n="doc" s={15} /> Full ledger CSV</button>
+        </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-4 gap-4 mb-7">
-        <KpiCard label="Total Income" value={formatCurrency(totalIncome)} accent="bg-green" />
-        <KpiCard label="Total Expenses" value={formatCurrency(totalExpenses)} accent="bg-red" />
-        <KpiCard label="Gross Profit" value={formatCurrency(grossProfit)} accent={grossProfit >= 0 ? 'bg-green' : 'bg-red'} />
-        <KpiCard label="Net Margin" value={`${netMargin}%`} accent="bg-brand" />
-      </div>
+        {/* P&L strip */}
+        <div className="acc-pl-grid">
+          <div className="acc-pl-card" style={{ borderTop: '3px solid var(--green)' }}>
+            <div className="acc-pl-label">Total income</div>
+            <div className="acc-pl-val" style={{ color: 'var(--green)' }}>{formatCurrency(totalIncome)}</div>
+            <div className="acc-pl-sub">{income.length} transactions</div>
+          </div>
+          <div className="acc-pl-card" style={{ borderTop: '3px solid var(--red)' }}>
+            <div className="acc-pl-label">Total expenses</div>
+            <div className="acc-pl-val" style={{ color: 'var(--red)' }}>{formatCurrency(totalExpenses)}</div>
+            <div className="acc-pl-sub">{expenses.length} line items</div>
+          </div>
+          <div className="acc-pl-card" style={{ borderTop: '3px solid var(--blue)' }}>
+            <div className="acc-pl-label">Gross profit</div>
+            <div className="acc-pl-val" style={{ color: 'var(--blue)' }}>{formatCurrency(grossProfit)}</div>
+            <div className="acc-pl-sub">{netMargin}% net margin</div>
+          </div>
+        </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 mb-4">
-        {[['pl', 'P&L Summary'], ['income', 'Income Ledger'], ['expense', 'Expense Ledger'], ['tax', 'Tax Summary']].map(([k, l]) => (
-          <button key={k} onClick={() => setTab(k as any)}
-            className={`px-4 py-2 rounded-btn text-sm font-600 transition ${tab === k ? 'bg-tx text-white' : 'bg-surface border border-border text-tx-2 hover:text-tx'}`}>
-            {l}
-          </button>
-        ))}
-      </div>
+        {/* Tabs */}
+        <div className="acc-tabs">
+          {([['pl', 'P&L Summary'], ['income', 'Income ledger'], ['expense', 'Expense ledger'], ['tax', 'Tax summary']] as const).map(([id, label]) => (
+            <button key={id} className={'acc-tab ' + (tab === id ? 'on' : '')} onClick={() => setTab(id)}>{label}</button>
+          ))}
+        </div>
 
-      <div className="bg-surface rounded-card border border-border overflow-hidden">
-        {tab === 'income' && (
-          <>
-            <div className="flex justify-end p-4 border-b border-border">
-              <button onClick={() => setShowModal('income')} className="px-3 py-1.5 bg-green text-white rounded-btn text-xs font-600">+ Add Income</button>
-            </div>
-            <EntryTable entries={income} />
-          </>
-        )}
-        {tab === 'expense' && (
-          <>
-            <div className="flex justify-end p-4 border-b border-border">
-              <button onClick={() => setShowModal('expense')} className="px-3 py-1.5 bg-red text-white rounded-btn text-xs font-600">+ Add Expense</button>
-            </div>
-            <EntryTable entries={expenses} />
-          </>
-        )}
+        {/* P&L summary */}
         {tab === 'pl' && (
-          <div className="p-6 space-y-6">
-            <div>
-              <h3 className="font-700 text-tx mb-3">Income</h3>
-              <div className="space-y-2">
-                {income.map(e => (
-                  <div key={e.id} className="flex justify-between text-sm py-1 border-b border-border/50">
-                    <span className="text-tx-2">{e.description}</span>
-                    <span className="font-mono font-600 text-green">+{formatCurrency(e.amount)}</span>
-                  </div>
-                ))}
-                <div className="flex justify-between font-700 text-tx pt-1">
-                  <span>Total Income</span><span className="font-mono text-green">{formatCurrency(totalIncome)}</span>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div className="card">
+              <div style={{ marginBottom: 14 }}><div className="card-title">Income breakdown</div></div>
+              {income.map(e => (
+                <div key={e.id} className="tax-row">
+                  <span className="tax-label">{e.description}</span>
+                  <span style={{ fontWeight: 800, color: 'var(--green)', fontFamily: 'var(--mono)' }}>+{formatCurrency(e.amount)}</span>
                 </div>
+              ))}
+              {income.length === 0 && !loading && <div style={{ color: 'var(--text-3)', fontSize: 13, padding: '10px 0' }}>No income entries</div>}
+              <div className="tax-row" style={{ fontWeight: 800, borderTop: '2px solid var(--border)', paddingTop: 10 }}>
+                <span>Total income</span><span style={{ color: 'var(--green)', fontFamily: 'var(--mono)' }}>+{formatCurrency(totalIncome)}</span>
               </div>
             </div>
-            <div>
-              <h3 className="font-700 text-tx mb-3">Expenses</h3>
-              <div className="space-y-2">
-                {expenses.map(e => (
-                  <div key={e.id} className="flex justify-between text-sm py-1 border-b border-border/50">
-                    <span className="text-tx-2">{e.description}</span>
-                    <span className="font-mono font-600 text-red">-{formatCurrency(e.amount)}</span>
-                  </div>
-                ))}
-                <div className="flex justify-between font-700 text-tx pt-1">
-                  <span>Total Expenses</span><span className="font-mono text-red">{formatCurrency(totalExpenses)}</span>
+            <div className="card">
+              <div style={{ marginBottom: 14 }}><div className="card-title">Expense breakdown</div></div>
+              {expenses.map(e => (
+                <div key={e.id} className="tax-row">
+                  <span className="tax-label">{e.description}</span>
+                  <span style={{ fontWeight: 800, color: 'var(--red)', fontFamily: 'var(--mono)' }}>-{formatCurrency(e.amount)}</span>
                 </div>
+              ))}
+              {expenses.length === 0 && !loading && <div style={{ color: 'var(--text-3)', fontSize: 13, padding: '10px 0' }}>No expense entries</div>}
+              <div className="tax-row" style={{ fontWeight: 800, borderTop: '2px solid var(--border)', paddingTop: 10 }}>
+                <span>Total expenses</span><span style={{ color: 'var(--red)', fontFamily: 'var(--mono)' }}>-{formatCurrency(totalExpenses)}</span>
               </div>
             </div>
-            <div className="border-t-2 border-border pt-4 flex justify-between font-800 text-lg">
-              <span className="text-tx">Gross Profit</span>
-              <span className={`font-mono ${grossProfit >= 0 ? 'text-green' : 'text-red'}`}>{formatCurrency(grossProfit)}</span>
+            <div className="card" style={{ gridColumn: '1/-1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="card-title">Gross profit — {MONTHS[month]} {year}</span>
+              <span style={{ fontFamily: 'var(--mono)', fontWeight: 800, fontSize: 20, color: grossProfit >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                {grossProfit >= 0 ? '+' : ''}{formatCurrency(grossProfit)}
+              </span>
             </div>
           </div>
         )}
-        {tab === 'tax' && (
-          <div className="p-6 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              {[
-                { label: 'Gross Revenue', value: formatCurrency(totalIncome) },
-                { label: 'VAT (14.5%)', value: formatCurrency(Math.round(totalIncome * 0.145)) },
-                { label: 'Income Tax (25%)', value: formatCurrency(Math.round(grossProfit * 0.25)) },
-                { label: 'Net After Tax', value: formatCurrency(Math.round(grossProfit * 0.75)) },
-              ].map(({ label, value }) => (
-                <div key={label} className="bg-bg rounded-btn p-4">
-                  <p className="text-xs text-tx-3 font-600 mb-1">{label}</p>
-                  <p className="font-800 font-mono text-xl text-tx">{value}</p>
-                </div>
-              ))}
+
+        {/* Income ledger */}
+        {tab === 'income' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+              <button className="btn btn-primary btn-sm" onClick={() => setShowModal('income')}><Ic n="plus" s={13} /> Add income</button>
             </div>
-            <p className="text-xs text-tx-3">Estimates based on Zimbabwe tax rates. Consult a tax professional.</p>
+            <Ledger entries={income} kind="income" />
+          </div>
+        )}
+
+        {/* Expense ledger */}
+        {tab === 'expense' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+              <button className="btn btn-sm" style={{ background: 'var(--red)', color: '#fff' }} onClick={() => setShowModal('expense')}><Ic n="plus" s={13} /> Add expense</button>
+            </div>
+            <Ledger entries={expenses} kind="expense" />
+          </div>
+        )}
+
+        {/* Tax summary */}
+        {tab === 'tax' && (
+          <div className="tax-grid">
+            <div className="tax-card">
+              <div style={{ marginBottom: 14 }}><div className="card-title">VAT summary</div><div className="card-sub">Zimbabwe — 14.5% VAT</div></div>
+              {[
+                ['Gross taxable income', formatCurrency(totalIncome)],
+                ['VAT collected (14.5%)', formatCurrency(Math.round(totalIncome * 0.145))],
+                ['Filing period', `${MONTHS[month]} ${year}`],
+              ].map(([l, v]) => (
+                <div key={l} className="tax-row"><span className="tax-label">{l}</span><span className="tax-val">{v}</span></div>
+              ))}
+              <div style={{ marginTop: 12, padding: '10px 14px', background: '#FEF3C7', borderRadius: 9, fontSize: 12.5, fontWeight: 700, color: '#b45309' }}>
+                ⚠ Export full ledger to prepare your VAT return
+              </div>
+            </div>
+            <div className="tax-card">
+              <div style={{ marginBottom: 14 }}><div className="card-title">Income tax estimate</div><div className="card-sub">Annual tax provision</div></div>
+              {[
+                ['Gross profit (' + MONTHS[month] + ')', formatCurrency(grossProfit)],
+                ['Estimated tax rate', '25%'],
+                ['Income tax (25%)', formatCurrency(Math.round(grossProfit * 0.25))],
+                ['Net after tax', formatCurrency(Math.round(grossProfit * 0.75))],
+              ].map(([l, v]) => (
+                <div key={l} className="tax-row"><span className="tax-label">{l}</span><span className="tax-val">{v}</span></div>
+              ))}
+              <p style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 12 }}>Estimates based on Zimbabwe tax rates. Consult a tax professional.</p>
+            </div>
           </div>
         )}
       </div>
@@ -198,22 +228,18 @@ export default function AccountsPage() {
       <Modal open={!!showModal} onClose={() => setShowModal(null)} title={showModal === 'income' ? 'Add Income Entry' : 'Add Expense Entry'} size="sm">
         <form onSubmit={handleAdd} className="space-y-4">
           <div><label className="block text-xs font-600 text-tx-2 mb-1">Description *</label>
-            <input required value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-              className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" /></div>
+            <input required value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="s-inp" /></div>
           <div className="grid grid-cols-2 gap-3">
             <div><label className="block text-xs font-600 text-tx-2 mb-1">Category</label>
-              <input value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" /></div>
+              <input value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} className="s-inp" /></div>
             <div><label className="block text-xs font-600 text-tx-2 mb-1">Amount ($) *</label>
-              <input required type="number" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" /></div>
+              <input required type="number" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} className="s-inp" /></div>
           </div>
           <div><label className="block text-xs font-600 text-tx-2 mb-1">Date *</label>
-            <input required type="date" value={form.entry_date} onChange={e => setForm(f => ({ ...f, entry_date: e.target.value }))}
-              className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" /></div>
+            <input required type="date" value={form.entry_date} onChange={e => setForm(f => ({ ...f, entry_date: e.target.value }))} className="s-inp" /></div>
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={() => setShowModal(null)} className="px-4 py-2 border border-border rounded-btn text-sm text-tx-2">Cancel</button>
-            <button type="submit" className={`px-4 py-2 text-white rounded-btn text-sm font-600 ${showModal === 'income' ? 'bg-green' : 'bg-red'}`}>Add Entry</button>
+            <button type="button" onClick={() => setShowModal(null)} className="btn btn-ghost btn-sm">Cancel</button>
+            <button type="submit" className="btn btn-sm" style={{ background: showModal === 'income' ? 'var(--green)' : 'var(--red)', color: '#fff' }}>Add Entry</button>
           </div>
         </form>
       </Modal>

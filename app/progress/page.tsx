@@ -1,47 +1,33 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { Modal } from '@/components/ui/Modal'
-import { Badge } from '@/components/ui/Badge'
 import { useToast } from '@/components/ui/Toast'
 import { TableSkeleton } from '@/components/ui/Skeleton'
+import { Ic } from '@/components/ui/Icon'
 import { formatDate } from '@/lib/utils'
 
-function LineChart({ data, target }: { data: { date: string; score: number }[]; target: number }) {
+function ProgressChart({ data, target }: { data: { date: string; score: number }[]; target: number }) {
   if (data.length === 0) return (
-    <div className="flex items-center justify-center h-full text-tx-3 text-sm">No assessment data yet</div>
+    <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-3)' }}>No assessments logged yet</div>
   )
   const sorted = [...data].sort((a, b) => a.date.localeCompare(b.date))
-  const W = 600, H = 180, PAD = 40
-  const scores = sorted.map(d => d.score)
-  const min = Math.max(0, Math.min(...scores, target) - 10)
-  const max = Math.min(100, Math.max(...scores, target) + 10)
-  const xScale = (i: number) => PAD + (i / Math.max(sorted.length - 1, 1)) * (W - PAD * 2)
-  const yScale = (v: number) => H - PAD - ((v - min) / (max - min)) * (H - PAD * 2)
-
-  const points = sorted.map((d, i) => `${xScale(i)},${yScale(d.score)}`).join(' ')
-  const targetY = yScale(target)
-
+  const W = 480, H = 140, PL = 30, PB = 24, PT = 16, PR = 10
+  const cW = W - PL - PR, cH = H - PB - PT
+  const pts = sorted.map((a, i) => [PL + i * (cW / Math.max(sorted.length - 1, 1)), PT + cH - (a.score / 100) * cH])
+  const polyPts = pts.map(p => p.join(',')).join(' ')
+  const tgtY = PT + cH - (target / 100) * cH
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full">
-      {/* Grid lines */}
-      {[0, 25, 50, 75, 100].filter(v => v >= min && v <= max).map(v => (
-        <g key={v}>
-          <line x1={PAD} y1={yScale(v)} x2={W - PAD} y2={yScale(v)} stroke="#E8EDF3" strokeWidth="1" />
-          <text x={PAD - 6} y={yScale(v) + 4} textAnchor="end" fontSize="10" fill="#9AA3B0">{v}</text>
-        </g>
-      ))}
-      {/* Target dashed line */}
-      <line x1={PAD} y1={targetY} x2={W - PAD} y2={targetY} stroke="#1C8FD6" strokeWidth="1.5" strokeDasharray="6,4" />
-      <text x={W - PAD + 4} y={targetY + 4} fontSize="10" fill="#1C8FD6">Target</text>
-      {/* Score line */}
-      <polyline points={points} fill="none" stroke="#1FA871" strokeWidth="2.5" strokeLinejoin="round" />
-      {/* Dots */}
-      {sorted.map((d, i) => (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: H, overflow: 'visible' }}>
+      <line x1={PL} y1={tgtY} x2={W - PR} y2={tgtY} stroke="var(--orange)" strokeWidth={1.5} strokeDasharray="5 3" opacity={.7} />
+      <text x={W - PR + 4} y={tgtY + 4} fontSize={9} fill="var(--orange)" fontWeight={700}>{target}%</text>
+      <polyline points={polyPts} fill="none" stroke="var(--blue)" strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
+      {pts.map(([cx, cy], i) => (
         <g key={i}>
-          <circle cx={xScale(i)} cy={yScale(d.score)} r="4" fill="#1FA871" stroke="white" strokeWidth="2" />
-          <text x={xScale(i)} y={H - 6} textAnchor="middle" fontSize="10" fill="#9AA3B0">
-            {new Date(d.date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}
+          <circle cx={cx} cy={cy} r={5} fill="white" stroke="var(--blue)" strokeWidth={2} />
+          <text x={cx} y={H - 6} textAnchor="middle" fontSize={10} fontWeight={700} fill="var(--text-3)">
+            {new Date(sorted[i].date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' })}
           </text>
+          <text x={cx} y={cy - 9} textAnchor="middle" fontSize={10} fontWeight={700} fill="var(--blue)">{sorted[i].score}%</text>
         </g>
       ))}
     </svg>
@@ -77,9 +63,9 @@ export default function ProgressPage() {
   }, [selectedId])
 
   const selectedLearner = learners.find(l => l.id === selectedId)
-  const avgScore = assessments.length > 0 ? Math.round(assessments.reduce((a, b) => a + (b.score ?? 0), 0) / assessments.length) : 0
+  const latest = assessments[0]?.score ?? 0
   const latestTarget = assessments[0]?.target_score ?? 0
-  const trend = assessments.length >= 2 ? (assessments[0].score ?? 0) - (assessments[assessments.length - 1].score ?? 0) : 0
+  const trend = assessments.length >= 2 ? (assessments[0].score ?? 0) - (assessments[1].score ?? 0) : 0
 
   const handleAddAssessment = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -100,95 +86,85 @@ export default function ProgressPage() {
   return (
     <div>
       {ToastEl}
-      <div className="flex items-center justify-between mb-7">
+      <div className="page-header">
         <div>
-          <h1 className="text-2xl font-800 text-tx">Progress</h1>
-          <p className="text-tx-2 text-sm mt-1">Track learner assessment scores over time</p>
+          <div className="page-title">Student progress</div>
+          <div className="page-sub">Assessment history, grade targets and subject trends</div>
         </div>
-        <button onClick={() => setShowModal(true)} disabled={!selectedId}
-          className="bg-brand text-white px-4 py-2 rounded-btn text-sm font-600 hover:bg-brand-deep transition disabled:opacity-50">
-          + Add Assessment
-        </button>
+        <div className="page-actions">
+          <select
+            style={{ border: '1px solid var(--border)', borderRadius: 9, padding: '8px 12px', fontSize: 13, fontFamily: 'var(--font)', outline: 'none' }}
+            value={selectedId} onChange={e => setSelectedId(e.target.value)}>
+            <option value="">Select learner…</option>
+            {learners.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+          </select>
+          <button className="btn btn-primary btn-sm" onClick={() => setShowModal(true)} disabled={!selectedId} style={{ opacity: selectedId ? 1 : .5 }}>
+            <Ic n="plus" s={14} /> Add assessment
+          </button>
+        </div>
       </div>
+      <div className="page-body">
+        <div style={{ display: 'flex', gap: 14, marginBottom: 16 }}>
+          {[
+            ['Current score', assessments.length ? latest + '%' : '—', 'var(--blue)'],
+            ['Target', latestTarget ? latestTarget + '%' : '—', 'var(--orange)'],
+            ['Assessments', String(assessments.length), 'var(--purple)'],
+            ['Trend', assessments.length >= 2 ? (trend >= 0 ? '+' : '') + trend + 'pts' : '—', trend >= 0 ? 'var(--green)' : 'var(--red)'],
+          ].map(([l, v, c]) => (
+            <div key={l} className="kpi-card blue" style={{ flex: 1 }}>
+              <div className="kpi-label">{l}</div>
+              <div className="kpi-val" style={{ fontSize: 26, color: c }}>{v}</div>
+            </div>
+          ))}
+        </div>
 
-      {/* Learner selector */}
-      <div className="mb-5">
-        <select value={selectedId} onChange={e => setSelectedId(e.target.value)}
-          className="border border-border rounded-btn px-3 py-2 text-sm text-tx focus:outline-none focus:border-brand w-64">
-          <option value="">Select learner…</option>
-          {learners.map(l => <option key={l.id} value={l.id}>{l.name} · {l.subject}</option>)}
-        </select>
-      </div>
-
-      {/* KPI strip */}
-      <div className="grid grid-cols-4 gap-4 mb-5">
-        {[
-          { label: 'Total Sessions', value: assessments.length, color: 'text-tx' },
-          { label: 'Avg Score', value: assessments.length > 0 ? `${avgScore}%` : '—', color: avgScore >= 70 ? 'text-green' : 'text-red' },
-          { label: 'Target Score', value: latestTarget ? `${latestTarget}%` : '—', color: 'text-blue' },
-          { label: 'Trend', value: assessments.length >= 2 ? `${trend >= 0 ? '+' : ''}${trend}pts` : '—', color: trend >= 0 ? 'text-green' : 'text-red' },
-        ].map(k => (
-          <div key={k.label} className="bg-surface rounded-card border border-border p-5">
-            <p className="text-xs text-tx-3 font-600 mb-1">{k.label}</p>
-            <p className={`text-2xl font-800 ${k.color}`}>{k.value}</p>
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 }}>
+            <div>
+              <div className="card-title">{selectedLearner ? `${selectedLearner.name} — ${selectedLearner.subject ?? '—'}` : 'Select a learner'}</div>
+              <div className="card-sub">{selectedLearner ? `Grade ${selectedLearner.grade ?? '—'}${latestTarget ? ` · Target: ${latestTarget}%` : ''}` : ''}</div>
+            </div>
+            <div style={{ display: 'flex', gap: 14 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: 'var(--text-2)' }}>
+                <i style={{ width: 24, height: 2, background: 'var(--blue)', display: 'block', borderRadius: 2 }}></i>Score
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 700, color: 'var(--text-2)' }}>
+                <i style={{ width: 20, height: 0, display: 'block', borderTop: '2px dashed var(--orange)' }}></i>Target
+              </span>
+            </div>
           </div>
-        ))}
-      </div>
+          {loading ? (
+            <div className="skeleton" style={{ height: 140, borderRadius: 10 }} />
+          ) : (
+            <ProgressChart data={assessments.map(a => ({ date: a.date, score: a.score ?? 0 }))} target={latestTarget || 75} />
+          )}
+        </div>
 
-      {/* Chart */}
-      <div className="bg-surface rounded-card border border-border p-5 mb-5">
-        <p className="text-sm font-700 text-tx mb-3">Score Over Time</p>
-        <div className="h-[180px]">
-          <LineChart
-            data={assessments.map(a => ({ date: a.date, score: a.score ?? 0 }))}
-            target={latestTarget ?? 75}
-          />
+        <div className="data-table">
+          <div className="assess-head"><span>Date</span><span>Topic</span><span>Score</span><span>Target</span><span>Delta</span></div>
+          {loading ? (
+            <div style={{ padding: 16 }}><TableSkeleton rows={4} cols={5} /></div>
+          ) : assessments.length === 0 ? (
+            <div style={{ textAlign: 'center', color: 'var(--text-3)', padding: '40px 0', fontSize: 13 }}>No assessments yet</div>
+          ) : assessments.map((a, i) => {
+            const prev = assessments[i + 1]?.score
+            const d = prev !== undefined ? (a.score ?? 0) - prev : null
+            const target = a.target_score ?? 0
+            return (
+              <div key={a.id ?? i} className="assess-row">
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--text-2)' }}>{formatDate(a.date)}</span>
+                <span style={{ fontWeight: 700 }}>{a.topic ?? '—'}</span>
+                <span style={{ fontFamily: 'var(--mono)', fontWeight: 800, fontSize: 15, color: target && (a.score ?? 0) >= target ? 'var(--green)' : 'var(--text)' }}>{a.score ?? '—'}%</span>
+                <span style={{ fontFamily: 'var(--mono)', color: 'var(--orange)', fontWeight: 700 }}>{target ? target + '%' : '—'}</span>
+                <span style={{ fontWeight: 700, color: d === null ? 'var(--text-3)' : d >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                  {d === null ? '—' : (d >= 0 ? '+' : '') + d + 'pts'}
+                </span>
+              </div>
+            )
+          })}
         </div>
       </div>
 
-      {/* Assessment history table */}
-      <div className="bg-surface rounded-card border border-border overflow-hidden">
-        <div className="px-5 py-3 border-b border-border bg-bg">
-          <p className="text-sm font-700 text-tx">Assessment History</p>
-        </div>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border bg-bg">
-              {['Date', 'Topic', 'Score', 'Target', 'vs Target'].map(h => (
-                <th key={h} className="text-left text-xs text-tx-3 font-600 px-4 py-3">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={5} className="p-4"><TableSkeleton rows={4} cols={5} /></td></tr>
-            ) : assessments.length === 0 ? (
-              <tr><td colSpan={5} className="text-center text-tx-3 py-10">No assessments yet</td></tr>
-            ) : assessments.map(a => {
-              const diff = (a.score ?? 0) - (a.target_score ?? 0)
-              return (
-                <tr key={a.id} className="border-b border-border/50 hover:bg-bg transition">
-                  <td className="px-4 py-3 text-tx-2">{formatDate(a.date)}</td>
-                  <td className="px-4 py-3 font-600 text-tx">{a.topic ?? '—'}</td>
-                  <td className="px-4 py-3">
-                    <span className={`font-800 ${(a.score ?? 0) >= 70 ? 'text-green' : 'text-red'}`}>{a.score ?? '—'}%</span>
-                  </td>
-                  <td className="px-4 py-3 text-tx-2">{a.target_score ?? '—'}%</td>
-                  <td className="px-4 py-3">
-                    {a.target_score ? (
-                      <span className={`text-xs font-700 px-2 py-0.5 rounded-full ${diff >= 0 ? 'bg-green/10 text-green' : 'bg-red/10 text-red'}`}>
-                        {diff >= 0 ? '+' : ''}{diff}pts
-                      </span>
-                    ) : '—'}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Add Assessment Modal */}
       <Modal open={showModal} onClose={() => setShowModal(false)} title="Add Assessment" size="sm">
         <form onSubmit={handleAddAssessment} className="space-y-4">
           <div>
@@ -197,29 +173,25 @@ export default function ProgressPage() {
           </div>
           <div>
             <label className="block text-xs font-600 text-tx-2 mb-1">Date *</label>
-            <input required type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
-              className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" />
+            <input required type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className="s-inp" />
           </div>
           <div>
             <label className="block text-xs font-600 text-tx-2 mb-1">Topic *</label>
-            <input required value={form.topic} onChange={e => setForm(f => ({ ...f, topic: e.target.value }))}
-              className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" placeholder="e.g. Algebra basics" />
+            <input required value={form.topic} onChange={e => setForm(f => ({ ...f, topic: e.target.value }))} className="s-inp" placeholder="e.g. Algebra basics" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-600 text-tx-2 mb-1">Score (%) *</label>
-              <input required type="number" min="0" max="100" value={form.score} onChange={e => setForm(f => ({ ...f, score: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" />
+              <input required type="number" min="0" max="100" value={form.score} onChange={e => setForm(f => ({ ...f, score: e.target.value }))} className="s-inp" />
             </div>
             <div>
               <label className="block text-xs font-600 text-tx-2 mb-1">Target (%)</label>
-              <input type="number" min="0" max="100" value={form.target_score} onChange={e => setForm(f => ({ ...f, target_score: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" />
+              <input type="number" min="0" max="100" value={form.target_score} onChange={e => setForm(f => ({ ...f, target_score: e.target.value }))} className="s-inp" />
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 border border-border rounded-btn text-sm text-tx-2 hover:text-tx">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-brand text-white rounded-btn text-sm font-600 hover:bg-brand-deep">Add</button>
+            <button type="button" onClick={() => setShowModal(false)} className="btn btn-ghost btn-sm">Cancel</button>
+            <button type="submit" className="btn btn-primary btn-sm">Add</button>
           </div>
         </form>
       </Modal>

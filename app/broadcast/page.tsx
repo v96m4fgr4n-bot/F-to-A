@@ -49,80 +49,74 @@ export default function BroadcastPage() {
   return (
     <div>
       {ToastEl}
-      <div className="mb-7">
-        <h1 className="text-2xl font-800 text-tx">Broadcast</h1>
-        <p className="text-tx-2 text-sm mt-1">Send WhatsApp or email messages to learners</p>
+      <div className="page-header">
+        <div>
+          <div className="page-title">Broadcast</div>
+          <div className="page-sub">Send a message to all families at once</div>
+        </div>
       </div>
-
-      <div className="grid grid-cols-3 gap-5">
-        {/* Composer */}
-        <div className="col-span-2 space-y-5">
-          {/* Channel */}
-          <div className="bg-surface rounded-card border border-border p-5">
-            <p className="text-xs font-700 text-tx-2 uppercase tracking-wide mb-3">Channel</p>
-            <div className="flex gap-2">
-              {(['whatsapp', 'email', 'both'] as const).map(c => (
-                <button key={c} onClick={() => setChannel(c)}
-                  className={`px-4 py-2 rounded-btn text-sm font-600 capitalize border transition ${channel === c ? 'bg-brand text-white border-brand' : 'border-border text-tx-2 hover:text-tx'}`}>
-                  {c === 'whatsapp' ? '💬 WhatsApp' : c === 'email' ? '✉️ Email' : '📣 Both'}
+      <div className="page-body">
+        <div className="broadcast-wrap">
+          <div>
+            <div className="card" style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: 14 }}><div className="card-title">Compose message</div></div>
+              <div className="channel-toggle">
+                {([['whatsapp', '📱 WhatsApp'], ['email', '✉️ Email'], ['both', 'Both']] as const).map(([id, label]) => (
+                  <button key={id} className={'ch-btn ' + (channel === id ? 'on' : '')} onClick={() => setChannel(id)}>{label}</button>
+                ))}
+              </div>
+              {(channel === 'email' || channel === 'both') && (
+                <input className="broadcast-input" placeholder="Subject line…" value={subject} onChange={e => setSubject(e.target.value)} />
+              )}
+              <textarea
+                className="broadcast-textarea"
+                placeholder="Type your message here… Use {name} to personalise."
+                value={body}
+                onChange={e => setBody(e.target.value)}
+              />
+              {body && recipients.length > 0 && (
+                <div style={{ background: 'var(--bg)', borderRadius: 11, padding: '12px 14px', marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 4 }}>Preview (for {recipients[0]?.name})</div>
+                  <div style={{ fontSize: 13.5 }}>{preview(recipients[0]?.name ?? 'Learner')}</div>
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                <button className="btn btn-ghost btn-sm" onClick={() => localStorage.setItem('draft', body)}>Save draft</button>
+                <button className="btn btn-primary" onClick={send} disabled={sending || !body.trim() || selected.size === 0} style={{ opacity: sending || !body.trim() || selected.size === 0 ? .4 : 1 }}>
+                  {sending ? 'Sending…' : `Send to ${selected.size} families →`}
                 </button>
+              </div>
+            </div>
+          </div>
+          <div className="card">
+            <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div className="card-title">Recipients · {selected.size}</div>
+              <select
+                style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '5px 10px', fontSize: 12.5, fontFamily: 'var(--font)', outline: 'none' }}
+                value={filter} onChange={e => setFilter(e.target.value)}>
+                <option value="all">All families</option>
+                <option value="active">Active only</option>
+                <option value="paused">Paused</option>
+                <option value="pending">Inquiries</option>
+              </select>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingBottom: 9, borderBottom: '1px solid var(--border)' }}>
+              <input type="checkbox" className="recip-check" checked={selected.size === recipients.length && recipients.length > 0} onChange={toggleAll} />
+              <span style={{ fontSize: 12, color: 'var(--text-2)', fontWeight: 600 }}>{selected.size} / {recipients.length} selected</span>
+            </div>
+            <div className="recipient-list">
+              {recipients.map(l => (
+                <label key={l.id} className="recip-row" style={{ cursor: 'pointer' }}>
+                  <input type="checkbox" className="recip-check" checked={selected.has(l.id)} onChange={() => toggle(l.id)} />
+                  <Avatar name={l.name} size="sm" />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13 }}>{l.name}</div>
+                    <div style={{ fontSize: 11.5, color: 'var(--text-3)' }}>{channel === 'email' ? (l.parent_email ?? 'No email') : (l.parent_phone ?? 'No phone')}</div>
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-2)', background: 'var(--bg)', padding: '2px 7px', borderRadius: 5, textTransform: 'capitalize' }}>{l.plan ?? 'inquiry'}</span>
+                </label>
               ))}
             </div>
-          </div>
-
-          {/* Message */}
-          <div className="bg-surface rounded-card border border-border p-5 space-y-4">
-            {(channel === 'email' || channel === 'both') && (
-              <div><label className="block text-xs font-600 text-tx-2 mb-1">Subject</label>
-                <input value={subject} onChange={e => setSubject(e.target.value)}
-                  className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" /></div>
-            )}
-            <div>
-              <label className="block text-xs font-600 text-tx-2 mb-1">Message Body</label>
-              <p className="text-[11px] text-tx-3 mb-2">Use <code className="bg-bg px-1 rounded">{'{name}'}</code> to personalise</p>
-              <textarea value={body} onChange={e => setBody(e.target.value)} rows={6} placeholder="Hi {name}, …"
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand resize-none" />
-            </div>
-            {body && recipients.length > 0 && (
-              <div className="bg-bg rounded-btn p-3">
-                <p className="text-xs font-600 text-tx-2 mb-1">Preview (for {recipients[0]?.name})</p>
-                <p className="text-sm text-tx">{preview(recipients[0]?.name ?? 'Learner')}</p>
-              </div>
-            )}
-            <div className="flex justify-between items-center pt-2">
-              <button onClick={() => localStorage.setItem('draft', body)} className="text-sm text-tx-3 hover:text-tx">Save draft</button>
-              <button onClick={send} disabled={sending || !body.trim() || selected.size === 0}
-                className="px-5 py-2 bg-brand text-white rounded-btn text-sm font-600 hover:bg-brand-deep disabled:opacity-40 transition">
-                {sending ? 'Sending…' : `Send to ${selected.size} recipients`}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Recipients */}
-        <div className="bg-surface rounded-card border border-border p-5">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-700 text-tx-2 uppercase tracking-wide">Recipients</p>
-            <select value={filter} onChange={e => setFilter(e.target.value)}
-              className="border border-border rounded px-2 py-1 text-xs text-tx focus:outline-none">
-              {['active', 'paused', 'pending', 'all'].map(f => <option key={f} value={f} className="capitalize">{f}</option>)}
-            </select>
-          </div>
-          <div className="flex items-center gap-2 mb-3 pb-3 border-b border-border">
-            <input type="checkbox" checked={selected.size === recipients.length && recipients.length > 0} onChange={toggleAll} className="rounded" />
-            <span className="text-xs text-tx-2">{selected.size} / {recipients.length} selected</span>
-          </div>
-          <div className="space-y-2 max-h-80 overflow-y-auto">
-            {recipients.map(l => (
-              <label key={l.id} className="flex items-center gap-2 cursor-pointer hover:bg-bg p-1.5 rounded-btn">
-                <input type="checkbox" checked={selected.has(l.id)} onChange={() => toggle(l.id)} className="rounded" />
-                <Avatar name={l.name} size="sm" />
-                <div>
-                  <p className="text-xs font-600 text-tx">{l.name}</p>
-                  <p className="text-[10px] text-tx-3">{l.parent_phone ?? 'No phone'}</p>
-                </div>
-              </label>
-            ))}
           </div>
         </div>
       </div>

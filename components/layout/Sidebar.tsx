@@ -1,111 +1,129 @@
 'use client'
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { cn } from '@/lib/utils'
+import { Ic, type IconName } from '@/components/ui/Icon'
 
-const sections = [
-  {
-    label: 'OVERVIEW',
-    items: [
-      { href: '/dashboard', label: 'Dashboard', icon: '◈' },
-    ],
-  },
+const NAV_SECTIONS: { label: string; items: { href: string; label: string; icon: IconName }[] }[] = [
+  { label: 'OVERVIEW', items: [{ href: '/dashboard', label: 'Dashboard', icon: 'dash' }] },
   {
     label: 'STUDENTS',
     items: [
-      { href: '/learners', label: 'Learners', icon: '🎓' },
-      { href: '/progress', label: 'Progress', icon: '📈' },
-      { href: '/schedule', label: 'Schedule', icon: '📅' },
+      { href: '/learners', label: 'Learners', icon: 'users' },
+      { href: '/progress', label: 'Progress', icon: 'trend' },
+      { href: '/schedule', label: 'Schedule', icon: 'cal' },
     ],
   },
   {
     label: 'STAFF',
     items: [
-      { href: '/tutors', label: 'Tutors', icon: '👤' },
-      { href: '/matching', label: 'Matching', icon: '🔗' },
-      { href: '/payroll', label: 'Payroll', icon: '💰' },
+      { href: '/tutors', label: 'Tutors', icon: 'users' },
+      { href: '/matching', label: 'Matching', icon: 'link' },
+      { href: '/payroll', label: 'Payroll', icon: 'money' },
     ],
   },
   {
     label: 'BUSINESS',
     items: [
-      { href: '/pipeline', label: 'Pipeline', icon: '⬡' },
-      { href: '/finances', label: 'Finances', icon: '💳' },
-      { href: '/accounts', label: 'Accounts', icon: '📊' },
-      { href: '/discounts', label: 'Discounts', icon: '🏷' },
+      { href: '/pipeline', label: 'Pipeline', icon: 'chart' },
+      { href: '/finances', label: 'Finances', icon: 'money' },
+      { href: '/accounts', label: 'Accounts', icon: 'book' },
+      { href: '/discounts', label: 'Discounts', icon: 'tag' },
     ],
   },
   {
     label: 'COMMS',
     items: [
-      { href: '/sessions', label: 'Sessions', icon: '🗓' },
-      { href: '/broadcast', label: 'Broadcast', icon: '📣' },
-      { href: '/feedback', label: 'Feedback', icon: '⭐' },
+      { href: '/sessions', label: 'Sessions', icon: 'cal' },
+      { href: '/broadcast', label: 'Broadcast', icon: 'bell' },
+      { href: '/feedback', label: 'Feedback', icon: 'star' },
     ],
   },
   {
     label: 'ADMIN',
     items: [
-      { href: '/contracts', label: 'Contracts', icon: '📄' },
-      { href: '/reports', label: 'Reports', icon: '📊' },
-      { href: '/audit', label: 'Audit Log', icon: '🔍' },
-      { href: '/settings', label: 'Settings', icon: '⚙' },
+      { href: '/contracts', label: 'Contracts', icon: 'shield' },
+      { href: '/reports', label: 'Reports', icon: 'chart' },
+      { href: '/audit', label: 'Audit log', icon: 'tasks' },
+      { href: '/settings', label: 'Settings', icon: 'settings' },
     ],
   },
 ]
 
+const NOTIFS: { icon: IconName; color: string; bg: string; text: string; time: string; unread: boolean }[] = [
+  { icon: 'users', color: '#1FA871', bg: '#E8F5E9', text: 'New inquiry: Tatenda & Farai Makoni', time: '2h', unread: true },
+  { icon: 'alert', color: '#E0563B', bg: '#FEE2E2', text: 'Invoice overdue: Kudakwashe Ndlovu ($240)', time: '5h', unread: true },
+  { icon: 'users', color: '#1C8FD6', bg: '#EBF6FF', text: 'Tinashe cancelled session — Rufaro Gumbo', time: 'Yesterday', unread: false },
+  { icon: 'money', color: '#7A5AF8', bg: '#F2EEFF', text: 'Payroll due: 3 tutors — $1,840 total', time: '2d', unread: false },
+]
+
 export function Sidebar() {
   const pathname = usePathname()
+  const [showNotif, setShowNotif] = useState(false)
   return (
-    <aside className="fixed top-0 left-0 h-screen w-[230px] bg-navy flex flex-col z-40">
-      {/* Logo */}
-      <div className="px-5 py-5 border-b border-white/10">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-brand flex items-center justify-center text-white font-800 text-sm">F→A</div>
-          <div>
-            <p className="text-white font-700 text-sm leading-tight">F-to-A</p>
-            <p className="text-white/40 text-[10px] leading-tight">Tutoring Portal</p>
+    <div className="sidebar">
+      <div className="sb-logo">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 28, height: 28, borderRadius: 8, background: 'var(--blue)', color: '#fff', fontSize: 12, fontWeight: 800, display: 'grid', placeItems: 'center', letterSpacing: '-.02em' }}>
+            F·A
           </div>
+          <div style={{ color: '#fff', fontWeight: 800, fontSize: 15, letterSpacing: '-.01em' }}>F to A Tutoring</div>
         </div>
       </div>
-
-      {/* Nav */}
-      <nav className="flex-1 py-2 overflow-y-auto">
-        {sections.map(({ label, items }) => (
-          <div key={label}>
-            <p className="text-white/30 text-[10px] font-700 uppercase tracking-widest px-5 pt-4 pb-1">{label}</p>
-            {items.map(({ href, label: itemLabel, icon }) => {
-              const active = pathname === href || pathname.startsWith(href + '/')
+      <div className="sb-org">Admin portal v3</div>
+      <nav className="sb-nav">
+        {NAV_SECTIONS.map(sec => (
+          <div key={sec.label}>
+            <div className="sb-section">{sec.label}</div>
+            {sec.items.map(n => {
+              const active = pathname === n.href || pathname.startsWith(n.href + '/')
               return (
-                <Link
-                  key={href}
-                  href={href}
-                  className={cn(
-                    'flex items-center gap-3 px-5 py-2.5 mx-2 rounded-btn text-sm font-500 transition-all',
-                    active
-                      ? 'bg-white/10 text-white'
-                      : 'text-white/50 hover:text-white/80 hover:bg-white/5'
-                  )}
-                >
-                  <span className="text-base w-5 text-center">{icon}</span>
-                  {itemLabel}
+                <Link key={n.href} href={n.href} className={'sb-item ' + (active ? 'on' : '')} style={{ textDecoration: 'none' }}>
+                  <Ic n={n.icon} s={17} />
+                  {n.label}
                 </Link>
               )
             })}
           </div>
         ))}
+        <div className="sb-divider" />
       </nav>
-
-      {/* Footer */}
-      <div className="px-5 py-4 border-t border-white/10">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-brand/30 flex items-center justify-center text-white text-xs font-600">AD</div>
-          <div className="flex-1 min-w-0">
-            <p className="text-white text-xs font-600 truncate">Admin</p>
-            <p className="text-white/40 text-[10px] truncate">admin@ftoatutoring.net</p>
+      <div className="sb-bottom">
+        <div style={{ position: 'relative', marginBottom: 8 }}>
+          <button className="sb-item" style={{ width: '100%' }} onClick={() => setShowNotif(v => !v)}>
+            <Ic n="bell" s={17} /> Notifications
+            <span style={{ marginLeft: 'auto', background: 'var(--red)', color: '#fff', fontSize: 10, fontWeight: 800, padding: '1px 6px', borderRadius: 20 }}>2</span>
+          </button>
+          {showNotif && (
+            <div className="admin-notif-dropdown">
+              <div className="an-head">
+                Notifications{' '}
+                <button style={{ fontSize: 11.5, color: 'var(--blue)', fontWeight: 700, cursor: 'pointer', border: 'none', background: 'none' }} onClick={() => setShowNotif(false)}>
+                  Close
+                </button>
+              </div>
+              {NOTIFS.map((n, i) => (
+                <div key={i} className={'an-item ' + (n.unread ? 'unread' : '')}>
+                  <div className="an-icon" style={{ background: n.bg, color: n.color }}>
+                    <Ic n={n.icon} s={15} />
+                  </div>
+                  <div>
+                    <div className="an-text">{n.text}</div>
+                    <div className="an-time">{n.time} ago</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="sb-user">
+          <div className="sb-avatar">TN</div>
+          <div>
+            <div className="sb-uname">Takudzwa Nhema</div>
+            <div className="sb-urole">Owner / Director</div>
           </div>
         </div>
       </div>
-    </aside>
+    </div>
   )
 }

@@ -1,14 +1,32 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
-import { gasGet, gasPost } from '@/lib/gas'
+import { db } from '@/lib/supabase'
+import { logAudit } from '@/lib/audit'
 
 export async function GET() {
-  const result = await gasGet('tutors')
-  return NextResponse.json(result)
+  try {
+    const { data, error } = await db.from('tutors').select('*').order('name', { ascending: true })
+    if (error) throw error
+    return NextResponse.json({ data: data ?? [] })
+  } catch (e: any) {
+    return NextResponse.json({ data: [], error: e.message }, { status: 200 })
+  }
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json()
-  const result = await gasPost('tutors', 'create', { data: body })
-  return NextResponse.json(result, { status: 201 })
+  try {
+    const body = await req.json()
+    const { data, error } = await db.from('tutors').insert(body).select().single()
+    if (error) throw error
+    await logAudit(db, {
+      action: 'create',
+      entityType: 'tutor',
+      entityId: data?.id ?? null,
+      entityLabel: data?.name ?? null,
+      category: 'staff',
+    })
+    return NextResponse.json({ data }, { status: 201 })
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 })
+  }
 }

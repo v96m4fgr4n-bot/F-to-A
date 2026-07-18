@@ -4,15 +4,16 @@ import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { TableSkeleton } from '@/components/ui/Skeleton'
 import { useToast } from '@/components/ui/Toast'
+import { Ic } from '@/components/ui/Icon'
 import { formatDate, formatCurrency } from '@/lib/utils'
 
 const DISCOUNT_TYPES = ['Sibling', 'Scholarship', 'Referral', 'Staff', 'Other']
-const TYPE_COLORS: Record<string, string> = {
-  Sibling: 'bg-purple/10 text-purple',
-  Scholarship: 'bg-green/10 text-green',
-  Referral: 'bg-blue/10 text-blue',
-  Staff: 'bg-orange/10 text-orange',
-  Other: 'bg-bg text-tx-2',
+const TYPE_STYLES: Record<string, { bg: string; color: string }> = {
+  Scholarship: { bg: '#F2EEFF', color: 'var(--purple)' },
+  Sibling: { bg: '#EBF6FF', color: 'var(--blue)' },
+  Referral: { bg: '#FEF3C7', color: '#b45309' },
+  Staff: { bg: '#E8F5E9', color: 'var(--green)' },
+  Other: { bg: 'var(--bg)', color: 'var(--text-2)' },
 }
 
 export default function DiscountsPage() {
@@ -67,95 +68,86 @@ export default function DiscountsPage() {
 
   const active = discounts.filter(d => d.status === 'active')
   const totalSavings = active.reduce((a, d) => a + (d.amount_usd ?? 0), 0)
-  const byType: Record<string, number> = {}
-  active.forEach(d => { byType[d.type] = (byType[d.type] ?? 0) + 1 })
+  const scholarships = active.filter(d => d.type === 'Scholarship').length
 
   return (
     <div>
       {ToastEl}
-      <div className="flex items-center justify-between mb-7">
+      <div className="page-header">
         <div>
-          <h1 className="text-2xl font-800 text-tx">Discounts</h1>
-          <p className="text-tx-2 text-sm mt-1">{active.length} active discounts</p>
+          <div className="page-title">Discounts & scholarships</div>
+          <div className="page-sub">{formatCurrency(totalSavings)}/mo applied across {active.length} active learners</div>
         </div>
-        <button onClick={() => setShowModal(true)} className="bg-brand text-white px-4 py-2 rounded-btn text-sm font-600 hover:bg-brand-deep transition">
-          + Add Discount
-        </button>
+        <div className="page-actions">
+          <button className="btn btn-primary btn-sm" onClick={() => setShowModal(true)}><Ic n="plus" s={14} /> Add discount</button>
+        </div>
       </div>
+      <div className="page-body">
+        <div style={{ display: 'flex', gap: 14, marginBottom: 16 }}>
+          {([
+            ['Active discounts', String(active.length), 'var(--green)'],
+            ['Monthly value', formatCurrency(totalSavings), 'var(--orange)'],
+            ['Scholarships', String(scholarships), 'var(--purple)'],
+          ] as const).map(([l, v, c]) => (
+            <div key={l} className="kpi-card blue" style={{ flex: 1 }}>
+              <div className="kpi-label">{l}</div>
+              <div className="kpi-val" style={{ fontSize: 28, color: c }}>{v}</div>
+            </div>
+          ))}
+        </div>
 
-      <div className="grid grid-cols-4 gap-4 mb-5">
-        <div className="bg-surface rounded-card border border-border p-5">
-          <p className="text-xs text-tx-3 font-600 mb-1">Active Discounts</p>
-          <p className="text-3xl font-800 text-green">{active.length}</p>
+        <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+          {['all', ...DISCOUNT_TYPES].map(t => (
+            <button key={t} className={'month-btn ' + (typeFilter === t ? 'on' : '')} onClick={() => handleTypeFilter(t)} style={{ textTransform: t === 'all' ? 'capitalize' : undefined }}>
+              {t === 'all' ? 'All' : t}
+            </button>
+          ))}
         </div>
-        <div className="bg-surface rounded-card border border-border p-5">
-          <p className="text-xs text-tx-3 font-600 mb-1">Monthly Savings</p>
-          <p className="text-3xl font-800 text-red">{formatCurrency(totalSavings)}</p>
-        </div>
-        {DISCOUNT_TYPES.slice(0, 2).map(type => (
-          <div key={type} className="bg-surface rounded-card border border-border p-5">
-            <p className="text-xs text-tx-3 font-600 mb-1">{type}</p>
-            <p className="text-3xl font-800 text-tx">{byType[type] ?? 0}</p>
+
+        <div className="data-table">
+          <div className="discount-head">
+            <span>Learner</span><span>Type</span><span>Reason</span><span>Amount</span><span>Status</span><span>Since</span>
           </div>
-        ))}
-      </div>
-
-      <div className="flex gap-1 mb-5">
-        {['all', ...DISCOUNT_TYPES].map(t => (
-          <button key={t} onClick={() => handleTypeFilter(t)}
-            className={`px-3 py-1.5 rounded-btn text-xs font-600 transition ${typeFilter === t ? 'bg-tx text-white' : 'bg-surface border border-border text-tx-2 hover:text-tx'}`}>
-            {t}
-          </button>
-        ))}
-      </div>
-
-      <div className="bg-surface rounded-card border border-border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-border bg-bg">
-              {['Learner', 'Type', 'Reason', 'Amount', 'From', 'To', 'Status', ''].map(h => (
-                <th key={h} className="text-left text-xs text-tx-3 font-600 px-4 py-3">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={8} className="p-4"><TableSkeleton rows={5} cols={8} /></td></tr>
-            ) : discounts.length === 0 ? (
-              <tr><td colSpan={8} className="text-center text-tx-3 py-10">No discounts found</td></tr>
-            ) : discounts.map(d => (
-              <tr key={d.id} className="border-b border-border/50 hover:bg-bg transition">
-                <td className="px-4 py-3 font-600 text-tx">{d.learner?.name ?? '—'}</td>
-                <td className="px-4 py-3">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-600 ${TYPE_COLORS[d.type] ?? 'bg-bg text-tx-2'}`}>
-                    {d.type}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-tx-2 max-w-[180px] truncate">{d.reason ?? '—'}</td>
-                <td className="px-4 py-3 font-mono font-600 text-red">{d.amount_usd != null ? formatCurrency(d.amount_usd) : '—'}</td>
-                <td className="px-4 py-3 text-tx-2 text-xs">{d.applied_from ? formatDate(d.applied_from) : '—'}</td>
-                <td className="px-4 py-3 text-tx-2 text-xs">{d.applied_to ? formatDate(d.applied_to) : 'Ongoing'}</td>
-                <td className="px-4 py-3"><Badge value={d.status} /></td>
-                <td className="px-4 py-3">
+          {loading ? (
+            <div style={{ padding: 16 }}><TableSkeleton rows={5} cols={6} /></div>
+          ) : discounts.length === 0 ? (
+            <div style={{ textAlign: 'center', color: 'var(--text-3)', padding: '40px 0', fontSize: 13 }}>No discounts found</div>
+          ) : discounts.map(d => {
+            const ts = TYPE_STYLES[d.type] ?? TYPE_STYLES.Other
+            const inactive = d.status !== 'active'
+            return (
+              <div key={d.id} className="discount-row" style={{ opacity: inactive ? .55 : 1 }}>
+                <span style={{ fontWeight: 700 }}>{d.learner?.name ?? '—'}</span>
+                <span>
+                  <span style={{ fontSize: 11.5, fontWeight: 700, padding: '2px 8px', borderRadius: 5, background: ts.bg, color: ts.color }}>{d.type}</span>
+                </span>
+                <span style={{ fontSize: 12.5, color: 'var(--text-2)' }}>{d.reason ?? '—'}</span>
+                <span style={{ fontFamily: 'var(--mono)', fontWeight: 800, color: 'var(--orange)' }}>
+                  {d.amount_usd != null ? `${formatCurrency(d.amount_usd)}/mo` : '—'}
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Badge value={d.status} />
                   {d.status === 'active' && (
-                    <button onClick={() => handleDeactivate(d.id)}
-                      className="text-xs px-2 py-1 rounded-btn border border-border text-tx-3 hover:text-red hover:border-red transition">
-                      Deactivate
+                    <button onClick={() => handleDeactivate(d.id)} title="Deactivate"
+                      style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)' }}>
+                      ✕
                     </button>
                   )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </span>
+                <span style={{ fontSize: 12, color: 'var(--text-3)', fontFamily: 'var(--mono)' }}>
+                  {d.applied_from ? formatDate(d.applied_from) : '—'}
+                </span>
+              </div>
+            )
+          })}
+        </div>
       </div>
 
       <Modal open={showModal} onClose={() => setShowModal(false)} title="Add Discount" size="md">
         <form onSubmit={handleCreate} className="space-y-4">
           <div>
             <label className="block text-xs font-600 text-tx-2 mb-1">Learner *</label>
-            <select required value={form.learner_id} onChange={e => setForm(f => ({ ...f, learner_id: e.target.value }))}
-              className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand">
+            <select required value={form.learner_id} onChange={e => setForm(f => ({ ...f, learner_id: e.target.value }))} className="s-inp">
               <option value="">Select learner…</option>
               {learners.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
             </select>
@@ -163,37 +155,32 @@ export default function DiscountsPage() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-600 text-tx-2 mb-1">Type *</label>
-              <select required value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand">
+              <select required value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value }))} className="s-inp">
                 {DISCOUNT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
             <div>
               <label className="block text-xs font-600 text-tx-2 mb-1">Amount (USD/mo) *</label>
-              <input required type="number" min="0" step="0.01" value={form.amount_usd} onChange={e => setForm(f => ({ ...f, amount_usd: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" />
+              <input required type="number" min="0" step="0.01" value={form.amount_usd} onChange={e => setForm(f => ({ ...f, amount_usd: e.target.value }))} className="s-inp" />
             </div>
           </div>
           <div>
             <label className="block text-xs font-600 text-tx-2 mb-1">Reason</label>
-            <input value={form.reason} onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
-              className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" />
+            <input value={form.reason} onChange={e => setForm(f => ({ ...f, reason: e.target.value }))} className="s-inp" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-600 text-tx-2 mb-1">Applies From</label>
-              <input type="date" value={form.applied_from} onChange={e => setForm(f => ({ ...f, applied_from: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" />
+              <input type="date" value={form.applied_from} onChange={e => setForm(f => ({ ...f, applied_from: e.target.value }))} className="s-inp" />
             </div>
             <div>
               <label className="block text-xs font-600 text-tx-2 mb-1">Applies To</label>
-              <input type="date" value={form.applied_to} onChange={e => setForm(f => ({ ...f, applied_to: e.target.value }))}
-                className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" />
+              <input type="date" value={form.applied_to} onChange={e => setForm(f => ({ ...f, applied_to: e.target.value }))} className="s-inp" />
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 border border-border rounded-btn text-sm text-tx-2 hover:text-tx">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-brand text-white rounded-btn text-sm font-600 hover:bg-brand-deep">Add Discount</button>
+            <button type="button" onClick={() => setShowModal(false)} className="btn btn-ghost btn-sm">Cancel</button>
+            <button type="submit" className="btn btn-primary btn-sm">Add Discount</button>
           </div>
         </form>
       </Modal>

@@ -1,19 +1,26 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { Avatar } from '@/components/ui/Avatar'
-import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { useToast } from '@/components/ui/Toast'
+import { Ic } from '@/components/ui/Icon'
 import { formatDate } from '@/lib/utils'
 import type { PipelineStage } from '@/types'
 
 const STAGES: { key: PipelineStage; label: string; color: string }[] = [
-  { key: 'inquiry', label: 'Inquiry', color: 'border-purple' },
-  { key: 'matching', label: 'Matching', color: 'border-brand' },
-  { key: 'trial', label: 'Trial Booked', color: 'border-orange' },
-  { key: 'active', label: 'Active', color: 'border-green' },
-  { key: 'churned', label: 'Churned', color: 'border-red' },
+  { key: 'inquiry', label: 'Inquiry', color: '#7A5AF8' },
+  { key: 'matching', label: 'Matching', color: '#F26F1F' },
+  { key: 'trial', label: 'Trial booked', color: '#1C8FD6' },
+  { key: 'active', label: 'Active', color: '#1FA871' },
+  { key: 'churned', label: 'Churned', color: '#E0563B' },
 ]
+
+const SOURCE_COLORS: Record<string, { bg: string; color: string }> = {
+  WhatsApp: { bg: '#DCF8E4', color: '#128C7E' },
+  Instagram: { bg: '#FEE2E2', color: '#E0563B' },
+  Website: { bg: '#EBF6FF', color: '#1C8FD6' },
+  School: { bg: '#F2EEFF', color: '#7A5AF8' },
+  Referral: { bg: '#FEF3C7', color: '#b45309' },
+}
 
 export default function PipelinePage() {
   const [cards, setCards] = useState<any[]>([])
@@ -52,71 +59,70 @@ export default function PipelinePage() {
   return (
     <div>
       {ToastEl}
-      <div className="flex items-center justify-between mb-7">
+      <div className="page-header">
         <div>
-          <h1 className="text-2xl font-800 text-tx">Pipeline</h1>
-          <p className="text-tx-2 text-sm mt-1">{cards.length} total leads</p>
+          <div className="page-title">Enrollment pipeline</div>
+          <div className="page-sub">Track families from first inquiry to active learner</div>
         </div>
-        <button onClick={() => setShowModal(true)} className="bg-brand text-white px-4 py-2 rounded-btn text-sm font-600 hover:bg-brand-deep transition">
-          + Add Inquiry
-        </button>
+        <div className="page-actions">
+          <button className="btn btn-ghost btn-sm">Export</button>
+          <button className="btn btn-primary btn-sm" onClick={() => setShowModal(true)}><Ic n="plus" s={14} /> Add inquiry</button>
+        </div>
       </div>
-
-      <div className="flex gap-4 overflow-x-auto pb-4">
-        {STAGES.map(({ key, label, color }) => (
-          <div key={key} className="flex-shrink-0 w-60">
-            <div className={`flex items-center justify-between mb-3 pb-2 border-b-2 ${color}`}>
-              <span className="text-sm font-700 text-tx">{label}</span>
-              <span className="text-xs font-600 text-tx-2">{byStage(key).length}</span>
-            </div>
-            <div className="space-y-2">
-              {loading ? (
-                <div className="skeleton h-24 rounded-card" />
-              ) : byStage(key).length === 0 ? (
-                <div className="border-2 border-dashed border-border rounded-card p-4 text-center text-tx-3 text-xs">Empty</div>
-              ) : byStage(key).map(card => (
-                <div key={card.id} className="bg-surface rounded-card border border-border p-3 text-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Avatar name={card.parent_name ?? 'Unknown'} size="sm" />
-                    <div>
-                      <p className="font-600 text-tx text-xs">{card.learner?.name ?? 'Prospective'}</p>
-                      <p className="text-tx-3 text-[11px]">{card.parent_name}</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-1 mb-2">
-                    {(card.subjects ?? []).map((s: string) => (
-                      <span key={s} className="text-[10px] px-1.5 py-0.5 bg-bg border border-border rounded-full text-tx-2">{s}</span>
-                    ))}
-                  </div>
-                  <p className="text-[10px] text-tx-3 mb-2">{formatDate(card.moved_at)}</p>
-                  {card.churn_reason && <p className="text-[10px] text-red">{card.churn_reason}</p>}
-                  <select
-                    value={card.stage}
-                    onChange={e => moveStage(card.id, e.target.value as PipelineStage)}
-                    className="w-full mt-1 border border-border rounded px-2 py-1 text-[11px] text-tx focus:outline-none focus:border-brand">
-                    {STAGES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
-                  </select>
+      <div className="page-body">
+        <div className="pipeline-board">
+          {STAGES.map(col => {
+            const colCards = byStage(col.key)
+            return (
+              <div className="pipeline-col" key={col.key}>
+                <div className="pipeline-col-head">
+                  <span className="pipeline-col-title" style={{ color: col.color }}>{col.label}</span>
+                  <span className="pipeline-count">{colCards.length}</span>
                 </div>
-              ))}
-            </div>
-          </div>
-        ))}
+                {loading ? (
+                  <div className="skeleton" style={{ height: 96, borderRadius: 11 }} />
+                ) : colCards.map(card => (
+                  <div className="pipeline-card" key={card.id}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 2 }}>
+                      <div className="pc-lname">{card.learner?.name ?? 'Prospective'}</div>
+                      {card.source && (
+                        <span className="src-badge" style={{ background: SOURCE_COLORS[card.source]?.bg ?? 'var(--bg)', color: SOURCE_COLORS[card.source]?.color ?? 'var(--text-2)' }}>
+                          {card.source}
+                        </span>
+                      )}
+                    </div>
+                    <div className="pc-parent">{card.parent_name}</div>
+                    <div className="pc-tags">{(card.subjects ?? []).map((s: string) => <span key={s} className="pc-tag">{s}</span>)}</div>
+                    {card.churn_reason && <div style={{ fontSize: 11.5, color: 'var(--red)', fontWeight: 700, marginTop: 5 }}>Reason: {card.churn_reason}</div>}
+                    <div className="pc-date">Added {formatDate(card.moved_at)}</div>
+                    {col.key !== 'churned' && col.key !== 'active' && (
+                      <select
+                        style={{ marginTop: 8, width: '100%', fontSize: 11.5, padding: '4px 8px', border: '1px solid var(--border)', borderRadius: 7, fontFamily: 'var(--font)', color: 'var(--text-2)', cursor: 'pointer' }}
+                        value={card.stage}
+                        onChange={e => moveStage(card.id, e.target.value as PipelineStage)}>
+                        {STAGES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+                      </select>
+                    )}
+                  </div>
+                ))}
+                <button className="pipeline-add-btn" onClick={() => setShowModal(true)}><Ic n="plus" s={13} /> Add</button>
+              </div>
+            )
+          })}
+        </div>
       </div>
 
       <Modal open={showModal} onClose={() => setShowModal(false)} title="Add Inquiry" size="sm">
         <form onSubmit={handleAdd} className="space-y-4">
           <div><label className="block text-xs font-600 text-tx-2 mb-1">Parent Name *</label>
-            <input required value={form.parent_name} onChange={e => setForm(f => ({ ...f, parent_name: e.target.value }))}
-              className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" /></div>
+            <input required value={form.parent_name} onChange={e => setForm(f => ({ ...f, parent_name: e.target.value }))} className="s-inp" /></div>
           <div><label className="block text-xs font-600 text-tx-2 mb-1">Phone</label>
-            <input value={form.parent_phone} onChange={e => setForm(f => ({ ...f, parent_phone: e.target.value }))}
-              className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" /></div>
+            <input value={form.parent_phone} onChange={e => setForm(f => ({ ...f, parent_phone: e.target.value }))} className="s-inp" /></div>
           <div><label className="block text-xs font-600 text-tx-2 mb-1">Subjects (comma-separated)</label>
-            <input value={form.subjects} onChange={e => setForm(f => ({ ...f, subjects: e.target.value }))}
-              placeholder="Maths, English" className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand" /></div>
+            <input value={form.subjects} onChange={e => setForm(f => ({ ...f, subjects: e.target.value }))} placeholder="Maths, English" className="s-inp" /></div>
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 border border-border rounded-btn text-sm text-tx-2">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-brand text-white rounded-btn text-sm font-600">Add</button>
+            <button type="button" onClick={() => setShowModal(false)} className="btn btn-ghost btn-sm">Cancel</button>
+            <button type="submit" className="btn btn-primary btn-sm">Add</button>
           </div>
         </form>
       </Modal>
@@ -124,11 +130,10 @@ export default function PipelinePage() {
       <Modal open={!!churnModal} onClose={() => setChurnModal(null)} title="Churn Reason" size="sm">
         <div className="space-y-4">
           <div><label className="block text-xs font-600 text-tx-2 mb-1">Why did this lead churn?</label>
-            <textarea value={churnReason} onChange={e => setChurnReason(e.target.value)} rows={3}
-              className="w-full border border-border rounded-btn px-3 py-2 text-sm focus:outline-none focus:border-brand resize-none" /></div>
+            <textarea value={churnReason} onChange={e => setChurnReason(e.target.value)} rows={3} className="s-inp" style={{ resize: 'none' }} /></div>
           <div className="flex justify-end gap-2">
-            <button onClick={() => setChurnModal(null)} className="px-4 py-2 border border-border rounded-btn text-sm text-tx-2">Cancel</button>
-            <button onClick={handleChurn} className="px-4 py-2 bg-red text-white rounded-btn text-sm font-600">Mark Churned</button>
+            <button onClick={() => setChurnModal(null)} className="btn btn-ghost btn-sm">Cancel</button>
+            <button onClick={handleChurn} className="btn btn-sm" style={{ background: 'var(--red)', color: '#fff' }}>Mark Churned</button>
           </div>
         </div>
       </Modal>

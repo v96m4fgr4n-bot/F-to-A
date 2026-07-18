@@ -19,13 +19,13 @@ export async function GET(req: NextRequest) {
     if (error || !payroll) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
     const buffer = await renderToBuffer(
-      React.createElement(PayslipDocument, { data: payroll })
+      React.createElement(PayslipDocument, { data: payroll }) as any
     )
 
     const tutorName = payroll.tutor?.name?.replace(/\s+/g, '_') ?? 'tutor'
     const period = payroll.period_start?.slice(0, 7) ?? 'period'
 
-    return new NextResponse(buffer, {
+    return new NextResponse(new Uint8Array(buffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',

@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/supabase'
 import { logAudit } from '@/lib/audit'
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const body = await req.json()
     const { data, error } = await db.from('invoices').update(body).eq('id', params.id).select().single()

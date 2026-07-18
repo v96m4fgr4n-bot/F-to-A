@@ -8,7 +8,7 @@ export function SearchBox({ placeholder = 'Search…', onSearch, className }: {
   className?: string
 }) {
   const [val, setVal] = useState('')
-  const timer = useRef<ReturnType<typeof setTimeout>>()
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = e.target.value

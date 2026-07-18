@@ -2,7 +2,8 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/supabase'
 
-export async function POST(req: NextRequest, { params }: { params: { learnerId: string } }) {
+export async function POST(req: NextRequest, props: { params: Promise<{ learnerId: string }> }) {
+  const params = await props.params;
   try {
     const body = await req.json()
     const { data, error } = await db

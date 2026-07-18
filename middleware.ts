@@ -29,7 +29,10 @@ export async function middleware(req: NextRequest) {
 
   const { data: { session } } = await supabase.auth.getSession()
 
-  if (!session && !pathname.startsWith('/api')) {
+  if (!session) {
+    if (pathname.startsWith('/api')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     return NextResponse.redirect(new URL('/login', req.url))
   }
 
@@ -38,4 +41,5 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  runtime: 'nodejs',
 }

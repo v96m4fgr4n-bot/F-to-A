@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/supabase'
 import { logAudit } from '@/lib/audit'
 
-export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { data, error } = await db.from('learners').select('*').eq('id', params.id).single()
     if (error) throw error
@@ -13,7 +14,8 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const body = await req.json()
     const { data, error } = await db.from('learners').update(body).eq('id', params.id).select().single()
@@ -34,7 +36,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(_: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const { error } = await db.from('learners').delete().eq('id', params.id)
     if (error) throw error
